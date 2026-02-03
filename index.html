@@ -65,13 +65,9 @@
         /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
-
-        /* Detail-Funktion Stabilität */
-        .shift-row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .shift-details { display: none; background: #f1f5f9 !important; }
-        .shift-details.active { display: table-row; }
-        .det-box { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; }
-        .det-pill { background: white; padding: 4px 10px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        .highlight-edit { animation: pulse-bg 2s infinite; }
+        @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body>
@@ -380,6 +376,16 @@
         }
         
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
+        
+        // Nach dem Speichern zur Schicht springen
+        setTimeout(() => {
+            const target = document.getElementById('row-' + r.id);
+            if(target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight-edit');
+                setTimeout(() => target.classList.remove('highlight-edit'), 3000);
+            }
+        }, 100);
     }
 
     function del(id) { 
@@ -388,11 +394,6 @@
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
             render(); 
         } 
-    }
-
-    function toggleShiftDet(id) {
-        const el = document.getElementById('det-' + id);
-        if (el) el.classList.toggle('active');
     }
 
     function render() {
@@ -406,18 +407,24 @@
             const y = r.d.substring(0,4);
             const m = r.d.substring(0,7);
             const isFuture = r.d > todayStr;
+            
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
+            
             const yS = tree[y].stats;
             const mG = tree[y].months[m];
+            
             mG.items.push(r);
+            
             let st = r.status.toLowerCase();
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit') yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
+                
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
+                
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
@@ -425,56 +432,121 @@
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
+        
         let roundedTotalN = 0;
-        Object.keys(tree).forEach(y => { if(y === currentYear) Object.keys(tree[y].months).forEach(m => roundedTotalN += Math.round(tree[y].months[m].nH)); });
+        Object.keys(tree).forEach(y => {
+            if(y === currentYear) {
+                Object.keys(tree[y].months).forEach(m => {
+                   let rawM = tree[y].months[m].nH;
+                   roundedTotalN += Math.round(rawM);
+                });
+            }
+        });
+
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
 
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y];
             const yOpen = openYears.has(y);
-            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Krank: ${yData.stats.krank}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
+            
+            let yearHtml = `<div class="year-group">
+                <div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')">
+                    <span>JAHR ${y}</span>
+                    <div class="m-stats">
+                        <span>Arbeit: ${yData.stats.arbeit}</span>
+                        <span>Krank: ${yData.stats.krank}</span>
+                        <span>Urlaub: ${yData.stats.urlaub}</span>
+                        <span>BRGB: ${yData.stats.brgb}</span>
+                    </div>
+                </div>
+                <div class="month-content ${yOpen?'open':''}">`;
+
             Object.keys(yData.months).sort().reverse().forEach(m => {
-                const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
-                const roundedM_NH = Math.round(mG.nH), nE = roundedM_NH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, bruttoZulagen = nE + szE + soE + ftE + mG.bE, nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
-                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                const mG = yData.months[m];
+                const mOpen = openMonths.has(m);
+                const [yr, mo] = m.split('-');
+                
+                const roundedM_NH = Math.round(mG.nH);
+                const nE = roundedM_NH * config.nacht;
+                
+                const szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
+                const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
+                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
+
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
+                        <span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span>
+                        <div class="m-stats" ${mOpen?'style="display:none"':''}>
+                            <span>BRGB: ${mG.br}x</span>
+                            <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
+                        </div>
+                    </div>
+                    <div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                            <div></div><div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                            <div></div><div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                         </div>
                         <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
-                        <table style="table-layout: fixed;">${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
-                            const wd = wDaysShort[new Date(r.d).getDay()], isFut = r.d > todayStr, stat = r.status.charAt(0).toUpperCase() + r.status.slice(1), rowOp = isFut ? 'opacity: 0.6;' : '';
-                            return `<tr class="shift-row" onclick="toggleShiftDet(${r.id})" style="${rowOp}"><td style="width:35%"><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${stat}</small></td><td style="width:35%">${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h (${r.loc})</small></td><td class="action-btns" style="width:30%" onclick="event.stopPropagation()"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>
-                            <tr id="det-${r.id}" class="shift-details"><td colspan="3"><div class="det-box">
-                                <span class="det-pill">Zeit: ${r.s||'--'} - ${r.e||'--'}</span>
-                                ${r.p1s ? `<span class="det-pill">P1: ${r.p1s} (${r.pd1}m)</span>` : ''}
-                                ${r.p2s ? `<span class="det-pill">P2: ${r.p2s} (${r.pd2}m)</span>` : ''}
-                                ${r.faeCount ? `<span class="det-pill">FAE: Aktiv</span>` : ''}
-                            </div></td></tr>`;
-                        }).join('')}</table></div></div>`;
+                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
+                            const wd = wDaysShort[new Date(item.d).getDay()];
+                            const isFuture = item.d > todayStr;
+                            const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
+                            const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+                            const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
+                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                        }).join('')}</table>
+                    </div>
+                </div>`;
             });
-            yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
+
+            yearHtml += `</div></div>`;
+            cont.innerHTML += yearHtml;
         });
     }
 
     function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
+    
     function edit(id) { 
         const r=data.find(x=>x.id===id); if(!r) return;
-        document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
-        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
-        ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
-        document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=!!r.tr;
-        document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase()); window.scrollTo(0,0); 
+        
+        // Werte in Maske anzeigen
+        document.getElementById('edit-id').value=r.id; 
+        document.getElementById('d').value=r.d; 
+        document.getElementById('s').value=r.s||''; 
+        document.getElementById('e').value=r.e||''; 
+        document.getElementById('ev').value=r.ev||''; 
+        document.getElementById('eb').value=r.eb||''; 
+        document.getElementById('p1s').value=r.p1s||''; 
+        document.getElementById('pd1').value=r.pd1||0; 
+        document.getElementById('p2s').value=r.p2s||''; 
+        document.getElementById('pd2').value=r.pd2||0; 
+        document.getElementById('loc').value=r.loc||'BHF'; 
+        document.getElementById('tr').checked=!!r.tr; 
+        document.getElementById('korrHin').value=r.korrHin||''; 
+        document.getElementById('korrRueck').value=r.korrRueck||''; 
+        
+        document.getElementById('edit-id-view').style.display='block'; 
+        document.getElementById('btn-cancel-edit').style.display='flex'; 
+        
+        toggleStatus(r.status.toLowerCase()); 
+        autoDetectDay();
+        
+        // Zur Maske springen
+        document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
         ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
@@ -484,4 +556,3 @@
 </script>
 </body>
 </html>
-
