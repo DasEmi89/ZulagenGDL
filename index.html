@@ -276,18 +276,23 @@
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id));
+                // NEU: Vergewissere dich, dass jede importierte Schicht eine ID hat
+                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id))
+                    .map(item => {
+                        if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
+                        return item;
+                    });
                 data = [...data, ...newItems];
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
                 toggleImport();
                 document.getElementById('import-area').value = '';
-                alert(newItems.length + " neue Schichten erfolgreich zum bestehenden Plan hinzugefügt!");
+                alert(newItems.length + " neue Schichten erfolgreich hinzugefügt!");
             } else {
-                alert("Format ungültig: Das 'data' Array fehlt.");
+                alert("Format ungültig.");
             }
         } catch(e) {
-            alert("Fehler beim Verarbeiten der Daten. Bitte Datei oder Text prüfen.");
+            alert("Fehler beim Verarbeiten.");
         }
     }
 
@@ -519,9 +524,9 @@
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
     
     function edit(id) { 
-        const r=data.find(x=>x.id===id); if(!r) return;
+        const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
+        if(!r) return;
         
-        // Werte in Maske anzeigen
         document.getElementById('edit-id').value=r.id; 
         document.getElementById('d').value=r.d; 
         document.getElementById('s').value=r.s||''; 
@@ -533,7 +538,7 @@
         document.getElementById('p2s').value=r.p2s||''; 
         document.getElementById('pd2').value=r.pd2||0; 
         document.getElementById('loc').value=r.loc||'BHF'; 
-        document.getElementById('tr').checked=!!r.tr; 
+        document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
         document.getElementById('korrHin').value=r.korrHin||''; 
         document.getElementById('korrRueck').value=r.korrRueck||''; 
         
@@ -542,8 +547,6 @@
         
         toggleStatus(r.status.toLowerCase()); 
         autoDetectDay();
-        
-        // Zur Maske springen
         document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
