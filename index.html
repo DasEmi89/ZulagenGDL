@@ -363,10 +363,26 @@
         const d=document.getElementById('d').value; if(!d) return;
         const id=document.getElementById('edit-id').value;
         let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-        r=calculateShift(r); if(id) data=data.filter(x=>x.id!==parseInt(id)); data.push(r); localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
+        r=calculateShift(r); 
+        
+        if(id) {
+            // Finde den Index und überschreibe die Schicht
+            const idx = data.findIndex(x => x.id === parseInt(id));
+            if(idx !== -1) data[idx] = r;
+        } else {
+            data.push(r);
+        }
+        
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
     }
 
-    function del(id) { if(confirm('Löschen?')) { data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
+    function del(id) { 
+        if(confirm('Möchtest du diese Schicht wirklich unwiderruflich löschen?')) { 
+            data=data.filter(r=>r.id!==id); 
+            localStorage.setItem('shifts_p10', JSON.stringify(data)); 
+            render(); 
+        } 
+    }
 
     function render() {
         const cont = document.getElementById('history'); cont.innerHTML = '';
