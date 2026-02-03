@@ -420,7 +420,7 @@
                             const locText = (r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit') ? ` (${r.loc})` : '';
                             const displayStatusFormatted = r.status.charAt(0).toUpperCase() + r.status.slice(1);
                             const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            return `<tr style="${rowOpacity}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr><td style="${rowOpacity}"><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
@@ -450,3 +450,4 @@
 </script>
 </body>
 </html>
+
