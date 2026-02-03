@@ -105,12 +105,8 @@
 
 <div id="import-panel">
     <h2 style="margin-top:0">Daten Importieren</h2>
-    <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 8px;">1. Datei auswählen (.json)</label>
-        <input type="file" id="import-file" accept=".json" style="width:100%; padding:10px; border:1px dashed #ccc; border-radius:10px;">
-    </div>
-    <p style="font-size: 0.7rem; color: #64748b; text-align: center;">- ODER TEXT EINFÜGEN -</p>
-    <textarea id="import-area" style="width:100%; height:150px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
+    <p style="font-size: 0.8rem; color: #64748b;">Füge deinen Backup-Text hier ein:</p>
+    <textarea id="import-area" style="width:100%; height:300px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
     <button onclick="processImport()" style="background:var(--success)">DATEN VERARBEITEN</button>
     <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
@@ -181,9 +177,11 @@
         const str = JSON.stringify(exportObj, null, 2);
         
         try {
+            // In Zwischenablage kopieren
             await navigator.clipboard.writeText(str);
             showToast("Backup kopiert & Download gestartet!");
 
+            // .json Datei Download erstellen
             const blob = new Blob([str], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -193,6 +191,7 @@
             document.body.appendChild(a);
             a.click();
             
+            // Aufräumen
             setTimeout(() => {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
@@ -207,18 +206,8 @@
         p.style.display = (p.style.display === 'block') ? 'none' : 'block';
     }
 
-    async function processImport() {
-        const fileInput = document.getElementById('import-file');
-        const textArea = document.getElementById('import-area');
-        let raw = "";
-
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            raw = await file.text();
-        } else {
-            raw = textArea.value.trim();
-        }
-
+    function processImport() {
+        const raw = document.getElementById('import-area').value.trim();
         if(!raw) return;
         try {
             const p = JSON.parse(raw);
@@ -229,8 +218,6 @@
                 localStorage.setItem('shifts_cfg_v1', JSON.stringify(config));
                 render();
                 toggleImport();
-                fileInput.value = "";
-                textArea.value = "";
                 alert("Import von " + data.length + " Einträgen erfolgreich!");
             } else {
                 alert("Format ungültig: Das 'data' Array fehlt.");
@@ -274,4 +261,10 @@
             let t1=timeToDec(r.s), t2=timeToDec(r.e); if(t1===null || t2===null) return r;
             if(t2<=t1) t2+=24;
             let n=0, sz=0, so=0, ft=0, w=0;
-            let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.
+            let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
+            for(let i=t1; i<t2; i+=0.25) {
+                if(!p.some(pa => i>=pa.s && i<pa.e)) {
+                    w+=0.25; let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
+                    let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
+                    if(c>=20 || c<6) n+=0.25; if(isF) ft+=0.25; else if(isO) so+=0.25; else if(isA && c>=13 && c<20) sz+=0.25;
+     
