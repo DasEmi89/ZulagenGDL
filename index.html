@@ -90,12 +90,12 @@
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
     <div class="grid"><div><label>FAE €/Tag</label><input type="number" id="cfg-fahrt" step="0.01"></div><div><label>Urlaub h/Tag</label><input type="number" id="cfg-gutschrift" step="0.01"></div></div>
     <hr>
-    <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
+    <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 10px;">Datensicherung (Browser & Hermit)</label>
+        <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
         <button onclick="exportData()" style="background:#475569; margin-top:0; font-size:0.9rem;">📥 BACKUP & DOWNLOAD</button>
         <button onclick="toggleImport()" style="background:#475569; margin-top:8px; font-size:0.9rem;">📤 IMPORT</button>
     </div>
@@ -105,8 +105,14 @@
 
 <div id="import-panel">
     <h2 style="margin-top:0">Daten Importieren</h2>
-    <p style="font-size: 0.8rem; color: #64748b;">Füge deinen Backup-Text hier ein:</p>
-    <textarea id="import-area" style="width:100%; height:300px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
+    <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 8px;">1. Datei auswählen (.json)</label>
+        <input type="file" id="import-file" accept=".json">
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 8px;">2. ODER Backup-Text einfügen</label>
+        <textarea id="import-area" style="width:100%; height:200px;" placeholder='{"data":[...]}'></textarea>
+    </div>
     <button onclick="processImport()" style="background:var(--success)">DATEN VERARBEITEN</button>
     <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
@@ -114,7 +120,7 @@
 <div id="refresh-dialog" onclick="if(event.target===this) closeRefreshDialog()">
     <div class="dialog-content">
         <h3 style="margin-top:0">Tarif-Update</h3>
-        <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum sollen Schichten neu berechnet werden?</p>
+        <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum neu berechnen?</p>
         <input type="date" id="refresh-date" style="margin-bottom:15px;">
         <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
         <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
@@ -165,6 +171,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
+    // Konstante Keys für Speicher
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d && r.d.startsWith('2026'));
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
@@ -173,64 +180,45 @@
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
     async function exportData() {
-        const exportObj = { data, config, date: new Date().toLocaleString() };
-        const str = JSON.stringify(exportObj, null, 2);
-        
+        const obj = { data, config, date: new Date().toLocaleString() };
+        const str = JSON.stringify(obj, null, 2);
         try {
-            // In Zwischenablage kopieren
             await navigator.clipboard.writeText(str);
-            showToast("Backup kopiert & Download gestartet!");
-
-            // .json Datei Download erstellen
+            showToast("Kopiert & Download!");
             const blob = new Blob([str], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const timestamp = new Date().toISOString().split('T')[0];
             a.href = url;
-            a.download = `schichten_backup_${timestamp}.json`;
-            document.body.appendChild(a);
-            a.click();
-            
-            // Aufräumen
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 0);
-        } catch (err) {
-            alert("Export fehlgeschlagen.");
-        }
+            a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+        } catch (err) { alert("Fehler"); }
     }
 
-    function toggleImport() {
-        const p = document.getElementById('import-panel');
-        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
-    }
+    function toggleImport() { const p = document.getElementById('import-panel'); p.style.display = (p.style.display === 'block') ? 'none' : 'block'; }
 
-    function processImport() {
-        const raw = document.getElementById('import-area').value.trim();
-        if(!raw) return;
+    async function processImport() {
+        const f = document.getElementById('import-file');
+        const t = document.getElementById('import-area');
+        let content = "";
+        if (f.files.length > 0) { content = await f.files[0].text(); } else { content = t.value.trim(); }
+        if (!content) return;
         try {
-            const p = JSON.parse(raw);
-            if(p.data && Array.isArray(p.data)) {
+            const p = JSON.parse(content);
+            if (p.data) {
                 data = p.data;
-                if(p.config) config = p.config;
+                if (p.config) config = p.config;
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 localStorage.setItem('shifts_cfg_v1', JSON.stringify(config));
-                render();
-                toggleImport();
-                alert("Import von " + data.length + " Einträgen erfolgreich!");
-            } else {
-                alert("Format ungültig: Das 'data' Array fehlt.");
+                render(); toggleImport(); f.value = ""; t.value = "";
+                alert("Import erfolgreich!");
             }
-        } catch(e) {
-            alert("Fehler beim Verarbeiten des JSON Codes.");
-        }
+        } catch (e) { alert("JSON Fehler"); }
     }
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
     function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
-    
     function recalculateFromDate() {
         const startD = document.getElementById('refresh-date').value; if(!startD) return;
         data = data.map(r => r.d >= startD ? calculateShift(r) : r);
@@ -238,12 +226,19 @@
     }
 
     function toggleConfig() { 
-        const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        const p = document.getElementById('config-panel');
+        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        if(p.style.display === 'block') {
+            ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => {
+                document.getElementById('cfg-'+k).value = config[k] || 0;
+            });
+        }
     }
 
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => {
+            config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0;
+        });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
 
@@ -267,4 +262,6 @@
                     w+=0.25; let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                     let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
                     if(c>=20 || c<6) n+=0.25; if(isF) ft+=0.25; else if(isO) so+=0.25; else if(isA && c>=13 && c<20) sz+=0.25;
-     
+                }
+            }
+            
