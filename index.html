@@ -297,11 +297,11 @@
             if(t2<=t1) t2+=24;
             let n=0, sz=0, so=0, ft=0, w=0;
             let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
-            for(let i=t1; i<t2; i+=0.25) {
+            for(let i=t1; i<t2; i+=(1/60)) {
                 if(!p.some(pa => i>=pa.s && i<pa.e)) {
-                    w+=0.25; let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
+                    w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                     let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
-                    if(c>=20 || c<6) n+=0.25; if(isF) ft+=0.25; else if(isO) so+=0.25; else if(isA && c>=13 && c<20) sz+=0.25;
+                    if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
