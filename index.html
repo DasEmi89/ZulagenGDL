@@ -276,7 +276,6 @@
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                // NEU: Vergewissere dich, dass jede importierte Schicht eine ID hat
                 const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id))
                     .map(item => {
                         if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
@@ -375,7 +374,10 @@
         
         if(id) {
             const idx = data.findIndex(x => x.id === parseInt(id));
-            if(idx !== -1) data[idx] = r;
+            if(idx !== -1) {
+                r.edited = true; // Flag setzen
+                data[idx] = r;
+            }
         } else {
             data.push(r);
         }
@@ -509,7 +511,8 @@
                             const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
                             const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
                             const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎ (bearbeitet)</small>' : '';
+                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
