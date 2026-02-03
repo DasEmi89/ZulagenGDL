@@ -72,7 +72,7 @@
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
-        <div><small>Ist-Jahr</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
+        <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
         <div style="text-align:right"><small>Soll Restjahr</small><br><strong id="s_offen">0.00</strong> <small>h</small></div>
     </div>
@@ -230,13 +230,8 @@
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                // Bestehende Schichten behalten, neue hinzufügen
                 const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id));
                 data = [...data, ...newItems];
-                
-                // Falls Config im Import enthalten ist (optional, überschreibt hier nicht zwingend, außer gewünscht)
-                // if(p.config) config = p.config; 
-                
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
                 toggleImport();
@@ -329,12 +324,32 @@
 
     function render() {
         const cont = document.getElementById('history'); cont.innerHTML = '';
+        const todayStr = new Date().toISOString().split('T')[0];
         let now=new Date(), tH=0, tV=0, tN=0; const g={};
+        
         data.forEach(r => {
-            const m=r.d.substring(0,7); tH+=r.h; if(r.status.toLowerCase()==='urlaub'&&new Date(r.d).getDay()%6!==0) tV++; tN+=r.nH;
+            const m=r.d.substring(0,7);
+            const isFuture = r.d > todayStr;
+            
+            // Urlaubs-Zähler (immer, für die Jahresübersicht)
+            if(r.status.toLowerCase()==='urlaub'&&new Date(r.d).getDay()%6!==0) tV++;
+            
+            // Ist-Stunden & Nacht-Stunden nur bis heute für Header/Zusatzurlaub
+            if(!isFuture) {
+                tH += r.h;
+                tN += r.nH;
+            }
+
             if(!g[m]) g[m]={items:[], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0};
-            let mG=g[m]; mG.items.push(r); mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
+            let mG=g[m];
+            mG.items.push(r);
+            
+            // Monats-Statistiken nur bis heute berechnen
+            if(!isFuture) {
+                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
+            }
         });
+        
         let diffD=Math.max(1, Math.ceil((now-new Date(2026,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH.toFixed(2); document.getElementById('d_sum').innerText=(tH-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH).toFixed(2);
         
@@ -370,12 +385,15 @@
                         <div></div>
                         <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                     </div>
-                    <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
+                    <div class="spesen-bar">Netto-Vorschau (bis heute): ~ ${nV.toFixed(2)} €</div>
                     <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                         const wd = wDaysShort[new Date(r.d).getDay()];
+                        const isFuture = r.d > todayStr;
                         const locText = (r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit') ? ` (${r.loc})` : '';
                         const displayStatusFormatted = r.status.charAt(0).toUpperCase() + r.status.slice(1);
-                        return `<tr><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                        const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
+                        
+                        return `<tr style="${rowOpacity}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                     }).join('')}</table>
                 </div>
             </div>`;
