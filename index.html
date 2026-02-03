@@ -95,8 +95,9 @@
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 10px;">Datensicherung (Hermit App)</label>
+        <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
         <button onclick="exportData()" style="background:#475569; margin-top:0; font-size:0.9rem;">📥 BACKUP KOPIEREN</button>
+        <button onclick="exportJSONFile()" style="background:#2563eb; margin-top:8px; font-size:0.9rem;">💾 ALS .JSON SPEICHERN</button>
         <button onclick="toggleImport()" style="background:#475569; margin-top:8px; font-size:0.9rem;">📤 IMPORT</button>
     </div>
     <button onclick="saveConfig()" style="background:var(--success)">SPEICHERN & SCHLIEẞEN</button>
@@ -105,9 +106,13 @@
 
 <div id="import-panel">
     <h2 style="margin-top:0">Daten Importieren</h2>
-    <p style="font-size: 0.8rem; color: #64748b;">Füge deinen Backup-Text hier ein:</p>
-    <textarea id="import-area" style="width:100%; height:300px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
-    <button onclick="processImport()" style="background:var(--success)">DATEN VERARBEITEN</button>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px;">Datei auswählen (.json)</label>
+        <input type="file" id="import-file" accept=".json" onchange="processFileImport(this)">
+    </div>
+    <p style="font-size: 0.8rem; color: #64748b;">Oder Backup-Text hier einfügen:</p>
+    <textarea id="import-area" style="width:100%; height:200px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
+    <button onclick="processImport()" style="background:var(--success)">TEXT VERARBEITEN</button>
     <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
 
@@ -185,16 +190,44 @@
         try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
     }
 
+    function exportJSONFile() {
+        const str = JSON.stringify({ data, config, date: new Date().toISOString() }, null, 2);
+        const blob = new Blob([str], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Schichten_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     function toggleImport() {
         const p = document.getElementById('import-panel');
         p.style.display = (p.style.display === 'block') ? 'none' : 'block';
     }
 
+    function processFileImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            applyImportData(e.target.result);
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
     function processImport() {
         const raw = document.getElementById('import-area').value.trim();
         if(!raw) return;
+        applyImportData(raw);
+    }
+
+    function applyImportData(jsonStr) {
         try {
-            const p = JSON.parse(raw);
+            const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
                 data = p.data;
                 if(p.config) config = p.config;
@@ -207,7 +240,7 @@
                 alert("Format ungültig: Das 'data' Array fehlt.");
             }
         } catch(e) {
-            alert("Fehler beim Verarbeiten des JSON Codes. Bitte sicherstellen, dass alles kopiert wurde.");
+            alert("Fehler beim Verarbeiten der Daten. Bitte Datei oder Text prüfen.");
         }
     }
 
