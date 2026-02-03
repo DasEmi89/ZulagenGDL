@@ -59,6 +59,7 @@
         .btn-close-edit { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #e2e8f0; color: #64748b; border-radius: 50%; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer; z-index: 10; }
         .header-info-row { font-size: 0.8rem; text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); line-height: 1.4; }
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
     </style>
 </head>
 <body>
@@ -180,8 +181,9 @@
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
-    let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d && r.d.startsWith('2026'));
+    let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
+    let openYears = new Set([new Date().getFullYear().toString()]);
     let activeStatus = 'Dienst';
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
@@ -325,79 +327,112 @@
     function render() {
         const cont = document.getElementById('history'); cont.innerHTML = '';
         const todayStr = new Date().toISOString().split('T')[0];
-        let now=new Date(), tH=0, tV=0, tN=0; const g={};
+        const currentYear = new Date().getFullYear().toString();
+        let tH_total=0, tV_total=0, tN_total=0; 
         
+        const tree = {};
         data.forEach(r => {
-            const m=r.d.substring(0,7);
+            const y = r.d.substring(0,4);
+            const m = r.d.substring(0,7);
             const isFuture = r.d > todayStr;
             
-            // Urlaubstage nur aufsummieren, wenn sie nicht in der Zukunft liegen
-            if(r.status.toLowerCase()==='urlaub' && !isFuture && new Date(r.d).getDay()%6!==0) tV++;
+            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
+            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
             
-            if(!isFuture) {
-                tH += r.h;
-                tN += r.nH;
-            }
-
-            if(!g[m]) g[m]={items:[], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0};
-            let mG=g[m];
+            const yS = tree[y].stats;
+            const mG = tree[y].months[m];
+            
             mG.items.push(r);
             
+            let st = r.status.toLowerCase();
             if(!isFuture) {
+                if(st === 'krank') yS.krank++;
+                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
+                if(st === 'dienst' || st === 'bereit') yS.arbeit++;
+                if(r.loc === 'BRGB') yS.brgb++;
+                
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
+                
+                if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
+            } else {
+                if(st === 'urlaub' && y === currentYear && new Date(r.d).getDay()%6!==0) { /* Nicht zählen für Ist-Header */ }
             }
         });
-        
-        let diffD=Math.max(1, Math.ceil((now-new Date(2026,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
-        document.getElementById('h_sum').innerText=tH.toFixed(2); document.getElementById('d_sum').innerText=(tH-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH).toFixed(2);
-        
+
+        // Header Update
+        let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
+        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
-        document.getElementById('vac-summary').innerText=`Urlaub: ${tV}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(tN/nSollH)} Tage (${tN.toFixed(2)}/${nSollH.toFixed(2)}h)`;
-        
-        document.getElementById('p_fill').style.width=Math.min(100,(tH/config.jsoll*100))+"%"; 
-        document.getElementById('p_text').innerText=`${(tH/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (2026)`;
-        
-        Object.keys(g).sort().reverse().forEach(m => {
-            const mG=g[m], open=openMonths.has(m), [y, mo]=m.split('-'), nE=mG.nH*config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
-            const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
-            const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
+        document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(tN_total/nSollH)} Tage (${tN_total.toFixed(2)}/${nSollH.toFixed(2)}h)`;
+        document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
+        document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
+
+        // Render Years
+        Object.keys(tree).sort().reverse().forEach(y => {
+            const yData = tree[y];
+            const yOpen = openYears.has(y);
             
-            cont.innerHTML += `<div class="year-group">
-                <div class="month-header ${open?'open':''}" onclick="toggleM('${m}')">
-                    <span>${monthNames[parseInt(mo)-1]} ${y} <b>(${mG.h.toFixed(1)}h)</b></span>
-                    <div class="m-stats" ${open?'style="display:none"':''}>
-                        <span>BRGB: ${mG.br}x</span>
-                        <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
+            let yearHtml = `<div class="year-group">
+                <div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')">
+                    <span>JAHR ${y}</span>
+                    <div class="m-stats">
+                        <span>Arbeit: ${yData.stats.arbeit}</span>
+                        <span>Krank: ${yData.stats.krank}</span>
+                        <span>Urlaub: ${yData.stats.urlaub}</span>
+                        <span>BRGB: ${yData.stats.brgb}</span>
                     </div>
                 </div>
-                <div class="month-content ${open?'open':''}">
-                    <div class="month-details-bar">
-                        <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${mG.nH.toFixed(2)}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
-                        <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
-                        <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
-                        <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
-                        <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                        <div></div>
-                        <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                        <div></div>
-                        <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                <div class="month-content ${yOpen?'open':''}">`;
+
+            Object.keys(yData.months).sort().reverse().forEach(m => {
+                const mG = yData.months[m];
+                const mOpen = openMonths.has(m);
+                const [yr, mo] = m.split('-');
+                const nE=mG.nH*config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
+                const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
+                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
+
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
+                        <span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span>
+                        <div class="m-stats" ${mOpen?'style="display:none"':''}>
+                            <span>BRGB: ${mG.br}x</span>
+                            <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
+                        </div>
                     </div>
-                    <div class="spesen-bar">Netto-Vorschau (bis heute): ~ ${nV.toFixed(2)} €</div>
-                    <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
-                        const wd = wDaysShort[new Date(r.d).getDay()];
-                        const isFuture = r.d > todayStr;
-                        const locText = (r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit') ? ` (${r.loc})` : '';
-                        const displayStatusFormatted = r.status.charAt(0).toUpperCase() + r.status.slice(1);
-                        const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                        
-                        return `<tr style="${rowOpacity}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
-                    }).join('')}</table>
-                </div>
-            </div>`;
+                    <div class="month-content ${mOpen?'open':''}">
+                        <div class="month-details-bar">
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${mG.nH.toFixed(2)}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
+                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
+                            <div></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                        </div>
+                        <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
+                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
+                            const wd = wDaysShort[new Date(r.d).getDay()];
+                            const isFuture = r.d > todayStr;
+                            const locText = (r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit') ? ` (${r.loc})` : '';
+                            const displayStatusFormatted = r.status.charAt(0).toUpperCase() + r.status.slice(1);
+                            const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
+                            return `<tr style="${rowOpacity}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                        }).join('')}</table>
+                    </div>
+                </div>`;
+            });
+
+            yearHtml += `</div></div>`;
+            cont.innerHTML += yearHtml;
         });
     }
+
     function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
+    function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
     function edit(id) { 
         const r=data.find(x=>x.id===id); if(!r) return;
         document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
