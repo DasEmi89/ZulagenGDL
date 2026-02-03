@@ -65,6 +65,13 @@
         /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
+
+        /* NEU: Klappbare Schicht-Details */
+        .shift-row { cursor: pointer; }
+        .shift-details { display: none; background: #f1f5f9 !important; padding: 10px; font-size: 0.75rem; border-top: 1px dashed #cbd5e0; }
+        .shift-details.open { display: table-row; }
+        .details-container { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; color: #475569; }
+        .detail-pill { background: white; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
@@ -366,7 +373,6 @@
         r=calculateShift(r); 
         
         if(id) {
-            // Finde den Index und überschreibe die Schicht
             const idx = data.findIndex(x => x.id === parseInt(id));
             if(idx !== -1) data[idx] = r;
         } else {
@@ -382,6 +388,14 @@
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
             render(); 
         } 
+    }
+
+    // NEU: Toggle für Schicht-Details
+    function toggleShiftDetails(id) {
+        const detailRow = document.getElementById('details-' + id);
+        if (detailRow) {
+            detailRow.classList.toggle('open');
+        }
     }
 
     function render() {
@@ -417,7 +431,6 @@
             }
         });
 
-        // Header Update
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
@@ -438,7 +451,6 @@
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
 
-        // Render Years
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y];
             const yOpen = openYears.has(y);
@@ -488,13 +500,37 @@
                             <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                         </div>
                         <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
-                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
+                        <table style="table-layout: fixed;">${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
                             const wd = wDaysShort[new Date(item.d).getDay()];
                             const isFuture = item.d > todayStr;
-                            const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
                             const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
                             const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            return `<tr><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                            
+                            // Details zusammenstellen
+                            let details = [];
+                            if(item.p1s) details.push(`P1: ${item.p1s} (${item.pd1}m)`);
+                            if(item.p2s) details.push(`P2: ${item.p2s} (${item.pd2}m)`);
+                            if(item.status.toLowerCase()==='bereit') details.push(`Einsatz: ${item.ev||'--'}-${item.eb||'--'}`);
+                            if(item.korrHin) details.push(`Korr. Hin: ${item.korrHin}m`);
+                            if(item.korrRueck) details.push(`Korr. Rück: ${item.korrRueck}m`);
+                            if(item.spesen > 0) details.push(`Spesen: ${item.spesen.toFixed(2)}€`);
+                            
+                            return `<tr class="shift-row" onclick="toggleShiftDetails(${item.id})" style="${rowOpacity}">
+                                <td style="width:35%"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}</small></td>
+                                <td style="width:35%">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h (${item.loc})</small></td>
+                                <td class="action-btns" style="width:30%" onclick="event.stopPropagation()">
+                                    <button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button>
+                                    <button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button>
+                                </td>
+                            </tr>
+                            <tr id="details-${item.id}" class="shift-details">
+                                <td colspan="3">
+                                    <div class="details-container">
+                                        ${details.length > 0 ? details.map(d => `<span class="detail-pill">${d}</span>`).join('') : '<i>Keine weiteren Details</i>'}
+                                        <span class="detail-pill" style="border-color:var(--p)">Zulagen: ${(item.nH*config.nacht + item.szH*config.samstag + item.soH*config.sonntag + item.ftH*config.feiertag + item.bonus).toFixed(2)}€</span>
+                                    </div>
+                                </td>
+                            </tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
