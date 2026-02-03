@@ -369,8 +369,21 @@
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
+        
+        // JÄHRLICHE NACHTSTUNDEN RUNDUNG FÜR ZUSATZURLAUB
+        let roundedTotalN = 0;
+        Object.keys(tree).forEach(y => {
+            if(y === currentYear) {
+                Object.keys(tree[y].months).forEach(m => {
+                   let rawM = tree[y].months[m].nH;
+                   roundedTotalN += Math.round(rawM);
+                });
+            }
+        });
+
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(tN_total/nSollH)} Tage (${tN_total.toFixed(2)}/${nSollH.toFixed(2)}h)`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
 
@@ -395,7 +408,12 @@
                 const mG = yData.months[m];
                 const mOpen = openMonths.has(m);
                 const [yr, mo] = m.split('-');
-                const nE=mG.nH*config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
+                
+                // RUNDUNG DER MONATLICHEN NACHTSTUNDEN FÜR ANZEIGE UND GELD
+                const roundedM_NH = Math.round(mG.nH);
+                const nE = roundedM_NH * config.nacht;
+                
+                const szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
                 const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
                 const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
 
@@ -409,7 +427,7 @@
                     </div>
                     <div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${mG.nH.toFixed(2)}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
@@ -456,3 +474,10 @@
 </script>
 </body>
 </html>
+
+Logik, Layout nicht verändern, optimieren, säubern 
+
+An Feiertagen gibt es keine Nachtstunden für den Zusatzurlaub 
+Außerdem sind Nachtstunden an Feiertagen generell nicht mit dem Nachtsatz zu berechnen sondern der normale Nachtsatz ist 0€ da dieser bereits mit der Feiertagszulage abgegolten ist 
+
+Ich möchte also für Feiertage 0 Nachtstunden haben sowohl für den Zusatzurlaub als auch für das Geld
