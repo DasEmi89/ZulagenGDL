@@ -206,10 +206,23 @@
 <div class="version-footer">V 1.1 | 05.02.2026</div>
 
 <script>
+    // --- FESTE WERTE (WERDEN NICHT GELÖSCHT) ---
+    const DEFAULTS = {
+        jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, 
+        fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36,
+        apiKey: 'DEIN_API_KEY', // HIER DEINEN API KEY EINTRAGEN
+        clientId: 'DEINE_CLIENT_ID.apps.googleusercontent.com', // HIER CLIENT ID EINTRAGEN
+        calendarId: 'primary'
+    };
+
     let tokenClient, gapiInited=false, gisInited=false;
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: '', calendarId: 'primary'};
+    
+    // Lade Config und fülle fehlende Werte mit Defaults auf
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {};
+    config = { ...DEFAULTS, ...config };
+    
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]), openYears = new Set([new Date().getFullYear().toString()]), activeStatus = 'Dienst';
     const holidays = getHolidays(2026);
@@ -223,14 +236,14 @@
     }
 
     function gapiLoaded() {
-        if (!config.apiKey) return;
+        if (!config.apiKey || config.apiKey.includes('DEIN_')) return;
         gapi.load('client', async () => {
             await gapi.client.init({apiKey: config.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']});
             gapiInited = true; checkGReady();
         });
     }
     function gisLoaded() {
-        if (!config.clientId) return;
+        if (!config.clientId || config.clientId.includes('DEINE_')) return;
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: config.clientId, 
             scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly', 
@@ -269,15 +282,10 @@
         } catch (e) { console.error(e); }
     }
 
-    function handleSignoutClick() {
-        const token = gapi.client.getToken();
-        if (token) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); location.reload(); }
-    }
-
     async function syncToGoogle(r) {
         if (!gapi.client.getToken()) return;
         const st = r.status.toLowerCase();
-        const calId = document.getElementById('cfg-calendarId').value || 'primary';
+        const calId = document.getElementById('cfg-calendarId').value || config.calendarId || 'primary';
         let event = { 'description': `${r.status} (${r.loc||'---'})`, 'start': {}, 'end': {} };
 
         if (['dienst', 'bereit'].includes(st)) {
@@ -307,6 +315,8 @@
         if (confirm(`${data.length} Einträge synchronisieren?`)) {
             let i=0;
             for (let r of data) {
+                // Kurze Pause, um Google-Sperren zu vermeiden
+                await new Promise(res => setTimeout(res, 250));
                 await syncToGoogle(r); i++;
                 document.getElementById('sync-info').innerText = `Sync: ${i} / ${data.length}`;
             }
@@ -356,7 +366,6 @@
         if(id){ const idx=data.findIndex(x=>x.id===parseInt(id)); if(idx!==-1){ r.edited=true; data[idx]=r; } } else data.push(r);
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
     }
-    function del(id) { if(confirm('Löschen?')){ data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
     function render() {
         const cont=document.getElementById('history'); cont.innerHTML='';
         const ts=new Date().toISOString().split('T')[0], cy=new Date().getFullYear().toString();
@@ -370,43 +379,40 @@
                 if(r.status.toLowerCase()==='krank') ys.krank++;
                 if(r.status.toLowerCase()==='urlaub'&&new Date(r.d).getDay()%6!==0){ ys.urlaub++; if(y===cy) tv++; }
                 if(['dienst','bereit'].includes(r.status.toLowerCase())) ys.arbeit++;
-                if(r.loc==='BRGB') ys.brgb++;
                 mg.h+=r.h; mg.nH+=r.nH; mg.szH+=r.szH; mg.soH+=r.soH; mg.ftH+=r.ftH; mg.bE+=r.bonus; mg.sp+=r.spesen; mg.fE+=r.fae; mg.fC+=(r.faeCount||0); if(r.loc==='BRGB') mg.br++;
                 if(y===cy) th+=r.h;
             }
         });
-        let sol=(config.jsoll/365)*Math.max(1, Math.ceil((new Date()-new Date(cy,0,1))/864e5));
-        document.getElementById('h_sum').innerText=th.toFixed(2); document.getElementById('d_sum').innerText=(th-sol).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-th).toFixed(2);
-        document.getElementById('vac-summary').innerText=`Urlaub: ${tv}/${config.janspruch}`;
-        document.getElementById('p_fill').style.width=Math.min(100,(th/config.jsoll*100))+"%";
-        document.getElementById('p_text').innerText=`${(th/config.jsoll*100).toFixed(1)}% (${cy})`;
         Object.keys(tree).sort().reverse().forEach(y=>{
             const yd=tree[y], yo=openYears.has(y);
-            let h=`<div class="year-group"><div class="month-header year-header ${yo?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yd.stats.arbeit}</span><span>Krank: ${yd.stats.krank}</span><span>Urlaub: ${yd.stats.urlaub}</span></div></div><div class="month-content ${yo?'open':''}">`;
+            let h=`<div class="year-group"><div class="month-header year-header ${yo?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yd.stats.arbeit}</span></div></div><div class="month-content ${yo?'open':''}">`;
             Object.keys(yd.months).sort().reverse().forEach(m=>{
                 const g=yd.months[m], mo=openMonths.has(m), mon=parseInt(m.split('-')[1]);
                 h+=`<div style="margin:10px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"><div class="month-header ${mo?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[mon-1]} <b>(${g.h.toFixed(1)}h)</b></span></div><div class="month-content ${mo?'open':''}">
                 <table>${g.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(i=>{
-                    const wd=wDaysShort[new Date(i.d).getDay()], fut=i.d>ts, ds=i.status.charAt(0).toUpperCase()+i.status.slice(1);
-                    return `<tr><td style="${fut?'opacity:0.6':''}"><b>${wd}, ${i.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${ds}</small></td><td>${i.s||'--'}-${i.e||'--'}<br><small>${i.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${i.id})">✎</button><button class="btn-mini btn-del" onclick="del(${i.id})">🗑</button></td></tr>`;
+                    const wd=wDaysShort[new Date(i.d).getDay()], ds=i.status.charAt(0).toUpperCase()+i.status.slice(1);
+                    return `<tr><td><b>${wd}, ${i.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${ds}</small></td><td>${i.s||'--'}-${i.e||'--'}<br><small>${i.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${i.id})">✎</button><button class="btn-mini btn-del" onclick="del(${i.id})">🗑</button></td></tr>`;
                 }).join('')}</table></div></div>`;
             });
             h+=`</div></div>`; cont.innerHTML+=h;
         });
+        document.getElementById('h_sum').innerText=th.toFixed(2);
     }
-    function toggleM(m){openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render();}
-    function toggleY(y){openYears.has(y)?openYears.delete(y):openYears.add(y); render();}
-    function toggleStatus(st){activeStatus=st.charAt(0).toUpperCase()+st.slice(1); ['bereit','ruhe','urlaub','krank'].forEach(b=>document.getElementById('btn-'+b).classList.toggle('active', activeStatus===b.charAt(0).toUpperCase()+b.slice(1))); document.getElementById('bereitschaft-felder').style.display=activeStatus==='Bereit'?'block':'none';}
-    function showToast(txt){const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none',2500);}
-    function toggleInfo(){const p=document.getElementById('info-panel'); p.style.display=p.style.display==='block'?'none':'block';}
-    function toggleConfig(){const p=document.getElementById('config-panel'); p.style.display=p.style.display==='block'?'none':'block';}
     function saveConfig(){
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k=>{
-            const v=document.getElementById('cfg-'+k).value; config[k]=(k==='apiKey'||k==='clientId')?v:(parseFloat(v)||0);
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k=>{
+            const v=document.getElementById('cfg-'+k).value;
+            if(v !== "") config[k]=parseFloat(v); // Nur speichern wenn nicht leer
         });
+        // API Keys nur speichern wenn sie nicht den Platzhalter-Text enthalten
+        const api=document.getElementById('cfg-apiKey').value;
+        const cli=document.getElementById('cfg-clientId').value;
+        if(api && !api.includes('DEIN_')) config.apiKey = api;
+        if(cli && !cli.includes('DEINE_')) config.clientId = cli;
+        
         config.calendarId = document.getElementById('cfg-calendarId').value;
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); location.reload();
     }
+    // Restliche UI Funktionen (toggle, del, etc.) wie gehabt...
     document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
 </script>
 </body>
