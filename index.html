@@ -68,6 +68,7 @@
         
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
+        .sync-indicator { font-size: 0.65rem; margin-top: 4px; opacity: 0.8; text-align: center; }
     </style>
 </head>
 <body>
@@ -81,7 +82,7 @@
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
-    <div id="sync-info" class="sync-indicator">GitHub Kalender: Nicht verbunden</div>
+    <div id="sync-info" class="sync-indicator">GitHub Kalender: Bereit</div>
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
         <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
@@ -236,19 +237,29 @@
         ];
 
         data.forEach(r => {
-            if (r.status.toLowerCase() === 'ruhe') return;
+            const stLow = r.status.toLowerCase();
             const cleanD = r.d.replace(/-/g, "");
-            let s, e;
-            if (['dienst', 'bereit'].includes(r.status.toLowerCase()) && r.s && r.e) {
-                s = `${cleanD}T${r.s.replace(":", "")}00`;
-                let endObj = new Date(`${r.d}T${r.e}:00`);
-                if (timeToDec(r.e) <= timeToDec(r.s)) endObj.setDate(endObj.getDate() + 1);
-                e = `${endObj.getFullYear()}${String(endObj.getMonth()+1).padStart(2,'0')}${String(endObj.getDate()).padStart(2,'0')}T${r.e.replace(":", "")}00`;
-            } else {
-                s = cleanD; let n = new Date(r.d); n.setDate(n.getDate()+1);
+            let summary = "";
+            let s = "", e = "";
+
+            if (stLow === 'dienst' || stLow === 'bereit') {
+                summary = `Arbeit ${r.s||''}-${r.e||''}`;
+                if (r.s && r.e) {
+                    s = `${cleanD}T${r.s.replace(":", "")}00`;
+                    let endObj = new Date(`${r.d}T${r.e}:00`);
+                    if (timeToDec(r.e) <= timeToDec(r.s)) endObj.setDate(endObj.getDate() + 1);
+                    e = `${endObj.getFullYear()}${String(endObj.getMonth()+1).padStart(2,'0')}${String(endObj.getDate()).padStart(2,'0')}T${r.e.replace(":", "")}00`;
+                }
+            } else if (stLow === 'urlaub' || stLow === 'krank' || stLow === 'ruhe') {
+                summary = r.status.charAt(0).toUpperCase() + r.status.slice(1);
+                s = cleanD; 
+                let n = new Date(r.d); n.setDate(n.getDate()+1);
                 e = n.toISOString().split('T')[0].replace(/-/g, "");
+            } else { return; }
+
+            if (s && e) {
+                ics.push("BEGIN:VEVENT", `UID:${r.id}@lok.de`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").split(".")[0]}Z`, `SUMMARY:${summary}`, `DTSTART;TZID=Europe/Berlin:${s}`, `DTEND;TZID=Europe/Berlin:${e}`, `DESCRIPTION:Stunden: ${r.h.toFixed(2)}h`, "END:VEVENT");
             }
-            ics.push("BEGIN:VEVENT", `UID:${r.id}@lok.de`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").split(".")[0]}Z`, `SUMMARY:${r.status}${r.loc?' ('+r.loc+')':''}`, `DTSTART;TZID=Europe/Berlin:${s}`, `DTEND;TZID=Europe/Berlin:${e}`, `DESCRIPTION:Stunden: ${r.h.toFixed(2)}h`, "END:VEVENT");
         });
         ics.push("END:VCALENDAR");
 
@@ -289,7 +300,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: ''};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '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', clientId: 'DasEmi89/ZulagenGDL'};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -437,6 +448,7 @@
             r.spesen = statusCheck==='krank'?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
             r.fae = (r.tr && statusCheck !== 'krank') ? config.fahrt : 0; r.faeCount = (r.tr && statusCheck !== 'krank') ? 1 : 0;
         } else if(statusCheck==='urlaub') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
+        else if(statusCheck==='ruhe') { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         return r;
     }
