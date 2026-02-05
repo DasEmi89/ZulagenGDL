@@ -62,7 +62,6 @@
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
         
-        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
         
@@ -211,14 +210,14 @@
 
 <div class="version-footer">
     Aktuelle Versionsnummer V84-GH<br>
-    Stand: 05.02.2026, 13:20 Uhr
+    Stand: 05.02.2026, 15:10 Uhr
 </div>
 
 <script>
     // --- GITHUB SYNC FUNKTION ---
     async function syncToGitHub() {
-        const ghToken = config.apiKey.trim();
-        const ghRepo = config.clientId.trim(); 
+        const ghToken = (document.getElementById('cfg-apiKey').value || config.apiKey).trim();
+        const ghRepo = (document.getElementById('cfg-clientId').value || config.clientId).trim();
         const ghPath = "dienstplan.ics";
 
         if (!ghToken || !ghRepo || !ghRepo.includes("/")) {
@@ -300,7 +299,8 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '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', clientId: 'DasEmi89/ZulagenGDL'};
+    // apiKey jetzt leer gelassen
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: 'DasEmi89/ZulagenGDL'};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
