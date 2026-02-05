@@ -62,9 +62,9 @@
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
         
-        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
+        .sync-indicator { font-size: 0.65rem; margin-top: 4px; opacity: 0.8; text-align: center; }
         
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
@@ -81,6 +81,7 @@
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
+    <div id="sync-info" class="sync-indicator">GitHub Kalender: Nicht verbunden</div>
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
         <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
@@ -122,6 +123,19 @@
     <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
+    <hr>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--p);">GitHub Kalender Abo</label>
+        <div style="margin-bottom: 10px;">
+            <label>GitHub User/Repo</label>
+            <input type="text" id="cfg-clientId" placeholder="Name/Repo">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>GitHub Token (No Expiration)</label>
+            <input type="password" id="cfg-apiKey" placeholder="github_pat_...">
+        </div>
+        <button onclick="syncToGitHub()" style="background:#16a34a; margin-top:5px;">PLAN AUF GITHUB AKTUALISIEREN</button>
+    </div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
         <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
@@ -195,11 +209,74 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.1<br>
-    Stand: 03.02.2026, 08:31 Uhr
+    Aktuelle Versionsnummer V84-GH<br>
+    Stand: 05.02.2026, 13:20 Uhr
 </div>
 
 <script>
+    // --- GITHUB SYNC FUNKTION ---
+    async function syncToGitHub() {
+        const ghToken = config.apiKey;
+        const ghRepo = config.clientId; // Format: Nutzer/Repo
+        const ghPath = "dienstplan.ics";
+
+        if (!ghToken || !ghRepo || !ghRepo.includes("/")) {
+            return alert("Bitte GitHub Token und Repo (Nutzer/Repo) im Zahnrad-Menü eintragen!");
+        }
+
+        const statusIndicator = document.getElementById('sync-info');
+        statusIndicator.innerText = "Sync: Generiere iCal...";
+
+        let ics = [
+            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lok-Zulagen//V84", "X-WR-CALNAME:Dienstplan", "X-WR-TIMEZONE:Europe/Berlin",
+            "BEGIN:VTIMEZONE", "TZID:Europe/Berlin",
+            "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3", "END:DAYLIGHT",
+            "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10", "END:STANDARD",
+            "END:VTIMEZONE"
+        ];
+
+        data.forEach(r => {
+            if (r.status.toLowerCase() === 'ruhe') return;
+            const cleanD = r.d.replace(/-/g, "");
+            let s, e;
+            if (['dienst', 'bereit'].includes(r.status.toLowerCase()) && r.s && r.e) {
+                s = `${cleanD}T${r.s.replace(":", "")}00`;
+                let endObj = new Date(`${r.d}T${r.e}:00`);
+                if (timeToDec(r.e) <= timeToDec(r.s)) endObj.setDate(endObj.getDate() + 1);
+                e = `${endObj.getFullYear()}${String(endObj.getMonth()+1).padStart(2,'0')}${String(endObj.getDate()).padStart(2,'0')}T${r.e.replace(":", "")}00`;
+            } else {
+                s = cleanD; let n = new Date(r.d); n.setDate(n.getDate()+1);
+                e = n.toISOString().split('T')[0].replace(/-/g, "");
+            }
+            ics.push("BEGIN:VEVENT", `UID:${r.id}@lok.de`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").split(".")[0]}Z`, `SUMMARY:${r.status}${r.loc?' ('+r.loc+')':''}`, `DTSTART;TZID=Europe/Berlin:${s}`, `DTEND;TZID=Europe/Berlin:${e}`, `DESCRIPTION:Stunden: ${r.h.toFixed(2)}h`, "END:VEVENT");
+        });
+        ics.push("END:VCALENDAR");
+
+        statusIndicator.innerText = "Sync: Upload zu GitHub...";
+        try {
+            const url = `https://api.github.com/repos/${ghRepo}/contents/${ghPath}`;
+            let sha = "";
+            const getR = await fetch(url, { headers: { "Authorization": `token ${ghToken}` } });
+            if (getR.ok) { const j = await getR.json(); sha = j.sha; }
+
+            const putR = await fetch(url, {
+                method: "PUT",
+                headers: { "Authorization": `token ${ghToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ message: "Update Plan", content: btoa(unescape(encodeURIComponent(ics.join("\r\n")))), sha: sha })
+            });
+
+            if (putR.ok) {
+                statusIndicator.innerText = "GitHub Sync: OK";
+                statusIndicator.style.color = "var(--success)";
+                showToast("Erfolgreich aktualisiert!");
+            } else { throw new Error(); }
+        } catch (err) {
+            statusIndicator.innerText = "GitHub Fehler!";
+            statusIndicator.style.color = "var(--danger)";
+        }
+    }
+
+    // --- BASIS LOGIK (UNVERÄNDERT) ---
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
         const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), n = Math.floor((h + l - 7 * m + 114) / 31), p = (h + l - 7 * m + 114) % 31;
@@ -212,7 +289,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: ''};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -305,10 +382,12 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => { 
+            config[k] = (k === 'apiKey' || k === 'clientId') ? document.getElementById('cfg-'+k).value : (parseFloat(document.getElementById('cfg-'+k).value) || 0); 
+        });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
     function autoDetectDay() {
@@ -375,7 +454,7 @@
         if(id) {
             const idx = data.findIndex(x => x.id === parseInt(id));
             if(idx !== -1) {
-                r.edited = true; // Flag setzen
+                r.edited = true; 
                 data[idx] = r;
             }
         } else {
@@ -384,7 +463,6 @@
         
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
         
-        // Nach dem Speichern zur Schicht springen
         setTimeout(() => {
             const target = document.getElementById('row-' + r.id);
             if(target) {
@@ -511,8 +589,8 @@
                             const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
                             const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
                             const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎ (bearbeitet)</small>' : '';
-                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎</small>' : '';
+                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
@@ -529,25 +607,14 @@
     function edit(id) { 
         const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
         if(!r) return;
-        
         document.getElementById('edit-id').value=r.id; 
         document.getElementById('d').value=r.d; 
-        document.getElementById('s').value=r.s||''; 
-        document.getElementById('e').value=r.e||''; 
-        document.getElementById('ev').value=r.ev||''; 
-        document.getElementById('eb').value=r.eb||''; 
-        document.getElementById('p1s').value=r.p1s||''; 
-        document.getElementById('pd1').value=r.pd1||0; 
-        document.getElementById('p2s').value=r.p2s||''; 
-        document.getElementById('pd2').value=r.pd2||0; 
+        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
+        ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
         document.getElementById('loc').value=r.loc||'BHF'; 
         document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
-        document.getElementById('korrHin').value=r.korrHin||''; 
-        document.getElementById('korrRueck').value=r.korrRueck||''; 
-        
         document.getElementById('edit-id-view').style.display='block'; 
         document.getElementById('btn-cancel-edit').style.display='flex'; 
-        
         toggleStatus(r.status.toLowerCase()); 
         autoDetectDay();
         document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
