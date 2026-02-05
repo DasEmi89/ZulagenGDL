@@ -206,12 +206,11 @@
 <div class="version-footer">V 1.1 | 05.02.2026</div>
 
 <script>
-    // --- FESTE WERTE (WERDEN NICHT GELÖSCHT) ---
     const DEFAULTS = {
         jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, 
         fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36,
-        apiKey: 'DEIN_API_KEY', // HIER DEINEN API KEY EINTRAGEN
-        clientId: 'DEINE_CLIENT_ID.apps.googleusercontent.com', // HIER CLIENT ID EINTRAGEN
+        apiKey: 'HIER_API_KEY_EINSETZEN',
+        clientId: 'HIER_CLIENT_ID_EINSETZEN.apps.googleusercontent.com',
         calendarId: 'primary'
     };
 
@@ -219,7 +218,6 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    // Lade Config und fülle fehlende Werte mit Defaults auf
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {};
     config = { ...DEFAULTS, ...config };
     
@@ -236,14 +234,14 @@
     }
 
     function gapiLoaded() {
-        if (!config.apiKey || config.apiKey.includes('DEIN_')) return;
+        if (!config.apiKey || config.apiKey.startsWith('HIER_')) return;
         gapi.load('client', async () => {
             await gapi.client.init({apiKey: config.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']});
             gapiInited = true; checkGReady();
         });
     }
     function gisLoaded() {
-        if (!config.clientId || config.clientId.includes('DEINE_')) return;
+        if (!config.clientId || config.clientId.startsWith('HIER_')) return;
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: config.clientId, 
             scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly', 
@@ -278,8 +276,13 @@
                 if(cal.id === config.calendarId) opt.selected = true;
                 select.appendChild(opt);
             });
-            showToast("Kalenderliste geladen");
+            showToast("Kalender geladen");
         } catch (e) { console.error(e); }
+    }
+
+    function handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); location.reload(); }
     }
 
     async function syncToGoogle(r) {
@@ -315,8 +318,7 @@
         if (confirm(`${data.length} Einträge synchronisieren?`)) {
             let i=0;
             for (let r of data) {
-                // Kurze Pause, um Google-Sperren zu vermeiden
-                await new Promise(res => setTimeout(res, 250));
+                await new Promise(res => setTimeout(res, 250)); // Rate-Limit Schutz
                 await syncToGoogle(r); i++;
                 document.getElementById('sync-info').innerText = `Sync: ${i} / ${data.length}`;
             }
@@ -366,6 +368,7 @@
         if(id){ const idx=data.findIndex(x=>x.id===parseInt(id)); if(idx!==-1){ r.edited=true; data[idx]=r; } } else data.push(r);
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
     }
+    function del(id) { if(confirm('Löschen?')){ data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
     function render() {
         const cont=document.getElementById('history'); cont.innerHTML='';
         const ts=new Date().toISOString().split('T')[0], cy=new Date().getFullYear().toString();
@@ -401,18 +404,22 @@
     function saveConfig(){
         ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k=>{
             const v=document.getElementById('cfg-'+k).value;
-            if(v !== "") config[k]=parseFloat(v); // Nur speichern wenn nicht leer
+            if(v !== "") config[k]=parseFloat(v);
         });
-        // API Keys nur speichern wenn sie nicht den Platzhalter-Text enthalten
         const api=document.getElementById('cfg-apiKey').value;
         const cli=document.getElementById('cfg-clientId').value;
-        if(api && !api.includes('DEIN_')) config.apiKey = api;
-        if(cli && !cli.includes('DEINE_')) config.clientId = cli;
-        
+        if(api && !api.startsWith('AIza')) config.apiKey = api;
+        if(cli && !cli.includes('apps.googleusercontent.com')) config.clientId = cli;
         config.calendarId = document.getElementById('cfg-calendarId').value;
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); location.reload();
     }
-    // Restliche UI Funktionen (toggle, del, etc.) wie gehabt...
+    function toggleM(m){openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render();}
+    function toggleY(y){openYears.has(y)?openYears.delete(y):openYears.add(y); render();}
+    function toggleStatus(st){activeStatus=st.charAt(0).toUpperCase()+st.slice(1); ['bereit','ruhe','urlaub','krank'].forEach(b=>document.getElementById('btn-'+b).classList.toggle('active', activeStatus===b.charAt(0).toUpperCase()+b.slice(1))); document.getElementById('bereitschaft-felder').style.display=activeStatus==='Bereit'?'block':'none';}
+    function showToast(txt){const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none',2500);}
+    function toggleInfo(){const p=document.getElementById('info-panel'); p.style.display=p.style.display==='block'?'none':'block';}
+    function toggleConfig(){const p=document.getElementById('config-panel'); p.style.display=p.style.display==='block'?'none':'block';}
+    function autoDetectDay(){const ds=document.getElementById('d').value; if(!ds)return; const dt=new Date(ds); let l='🏢 WERKTAG'; if(holidays.includes(ds))l='🚩 FEIERTAG'; else if(dt.getDay()===0)l='☀️ SONNTAG'; else if(dt.getDay()===6)l='📅 SAMSTAG'; document.getElementById('type-display').innerText=l;}
     document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
 </script>
 </body>
