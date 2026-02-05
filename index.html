@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
     <title>Lok-Zulagen Rechner V84</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+    <script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
     <style>
         :root { --p: #2563eb; --bg: #f8fafc; --text: #1e293b; --warn: #f59e0b; --danger: #ef4444; --success: #16a34a; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 15px 30px; }
@@ -255,7 +255,7 @@
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: config.clientId,
             scope: 'https://www.googleapis.com/auth/calendar.events',
-            callback: '', // wird bei Bedarf gesetzt
+            callback: '', 
         });
         gisInited = true;
         checkGReady();
@@ -275,7 +275,6 @@
             document.getElementById('signout-btn').style.display = 'block';
             document.getElementById('sync-all-btn').style.display = 'block';
         };
-
         if (gapi.client.getToken() === null) {
             tokenClient.requestAccessToken({prompt: 'consent'});
         } else {
@@ -298,12 +297,11 @@
     async function syncToGoogle(r) {
         if (!gapi.client.getToken()) return;
         if (r.status.toLowerCase() === 'ruhe' || r.status.toLowerCase() === 'krank') return;
+        if (!r.s || !r.e) return;
 
         const startStr = `${r.d}T${r.s}:00`;
         let endDate = new Date(`${r.d}T${r.e}:00`);
-        if (timeToDec(r.e) <= timeToDec(r.s)) {
-            endDate.setDate(endDate.getDate() + 1);
-        }
+        if (timeToDec(r.e) <= timeToDec(r.s)) endDate.setDate(endDate.getDate() + 1);
         const endStr = endDate.toISOString().split('.')[0];
 
         const event = {
@@ -313,39 +311,26 @@
         };
 
         try {
-            let request;
-            if (r.gEventId) {
-                request = gapi.client.calendar.events.patch({
-                    'calendarId': 'primary',
-                    'eventId': r.gEventId,
-                    'resource': event
-                });
-            } else {
-                request = gapi.client.calendar.events.insert({
-                    'calendarId': 'primary',
-                    'resource': event
-                });
-            }
+            let request = r.gEventId ? 
+                gapi.client.calendar.events.patch({ 'calendarId': 'primary', 'eventId': r.gEventId, 'resource': event }) :
+                gapi.client.calendar.events.insert({ 'calendarId': 'primary', 'resource': event });
             const response = await request;
             r.gEventId = response.result.id;
-        } catch (err) {
-            console.error("Google Sync Fehler", err);
-        }
+        } catch (err) { console.error("Sync Fehler:", err); }
     }
 
     async function syncAllToGoogle() {
-        if (!gapi.client.getToken()) {
-            alert("Bitte zuerst bei Google anmelden!");
-            return;
-        }
+        if (!gapi.client.getToken()) return alert("Bitte anmelden!");
         const toSync = data.filter(r => r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit');
-        if (confirm(`${toSync.length} Schichten werden synchronisiert. Fortfahren?`)) {
+        if (confirm(`${toSync.length} Schichten werden synchronisiert. Dies kann einen Moment dauern.`)) {
             document.getElementById('sync-info').innerText = "Voll-Sync läuft...";
             let count = 0;
             for (let r of toSync) {
+                // Verzögerung gegen Google Rate Limits
+                await new Promise(resolve => setTimeout(resolve, 200)); 
                 await syncToGoogle(r);
                 count++;
-                document.getElementById('sync-info').innerText = `Voll-Sync: ${count} / ${toSync.length}`;
+                document.getElementById('sync-info').innerText = `Sync: ${count} / ${toSync.length}`;
             }
             localStorage.setItem('shifts_p10', JSON.stringify(data));
             render();
@@ -354,13 +339,7 @@
         }
     }
 
-    // --- INITIALISIERUNG BEIM LADEN ---
-    window.onload = () => {
-        if (window.gapi) gapiLoaded();
-        if (window.google) gisLoaded();
-    };
-
-    // --- UI LOGIC (REINIGUNG) ---
+    // --- UI LOGIC ---
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
     function toggleInfo() {
@@ -487,17 +466,13 @@
         const id=document.getElementById('edit-id').value;
         let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
         r=calculateShift(r); 
-        
-        // Google Sync beim Speichern
         await syncToGoogle(r);
-
         if(id) {
             const idx = data.findIndex(x => x.id === parseInt(id));
             if(idx !== -1) { r.edited = true; data[idx] = r; }
         } else {
             data.push(r);
         }
-        
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
         setTimeout(() => {
             const target = document.getElementById('row-' + r.id);
@@ -515,7 +490,6 @@
         const currentYear = new Date().getFullYear().toString();
         let tH_total=0, tV_total=0, tN_total=0; 
         const tree = {};
-        
         data.forEach(r => {
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
@@ -532,7 +506,6 @@
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
-
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
@@ -542,7 +515,6 @@
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
-
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Krank: ${yData.stats.krank}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
