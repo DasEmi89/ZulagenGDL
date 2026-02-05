@@ -124,16 +124,19 @@
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
         <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--p);">Google Kalender Sync</label>
         <div style="margin-bottom: 10px;">
-            <label>API Key</label>
-            <input type="password" id="cfg-apiKey" placeholder="AIza...">
+            <label>Ziel-Kalender</label>
+            <select id="cfg-calendarId">
+                <option value="primary">Hauptkalender (Standard)</option>
+            </select>
+            <button onclick="listCalendars()" style="background:#64748b; padding:5px; font-size:0.7rem; margin-top:5px; color:white; border:none; border-radius:5px;">KALENDERLISTE LADEN</button>
         </div>
-        <div style="margin-bottom: 10px;">
-            <label>Client ID</label>
-            <input type="text" id="cfg-clientId" placeholder="...apps.googleusercontent.com">
+        <div class="grid">
+            <div><label>API Key</label><input type="password" id="cfg-apiKey" placeholder="AIza..."></div>
+            <div><label>Client ID</label><input type="text" id="cfg-clientId" placeholder="..."></div>
         </div>
         <button id="auth-btn" onclick="handleAuthClick()" style="background:#4285F4; margin-top:10px;">GOOGLE LOGIN</button>
         <button id="signout-btn" onclick="handleSignoutClick()" style="background:#64748b; margin-top:5px; display:none;">ABMELDEN</button>
-        <button id="sync-all-btn" onclick="syncAllToGoogle()" style="background:#16a34a; margin-top:5px; display:none;">ALLE SCHICHTEN SYNC</button>
+        <button id="sync-all-btn" onclick="syncAllToGoogle()" style="background:#16a34a; margin-top:5px; display:none;">ALLE EINTRÄGE SYNC</button>
     </div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
@@ -152,19 +155,17 @@
         <label style="display: block; margin-bottom: 10px;">Datei auswählen (.json)</label>
         <input type="file" id="import-file" accept=".json" onchange="processFileImport(this)">
     </div>
-    <p style="font-size: 0.8rem; color: #64748b;">Oder Dienstplan-Text hier einfügen (JSON):</p>
-    <textarea id="import-area" style="width:100%; height:250px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
-    <button onclick="processImport()" style="background:var(--success)">SCHICHTEN HINZUFÜGEN</button>
-    <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
+    <textarea id="import-area" style="width:100%; height:200px;" placeholder='JSON hier einfügen'></textarea>
+    <button onclick="processImport()" style="background:var(--success)">HINZUFÜGEN</button>
+    <button onclick="toggleImport()">ABBRECHEN</button>
 </div>
 
 <div id="refresh-dialog" onclick="if(event.target===this) closeRefreshDialog()">
     <div class="dialog-content">
-        <h3 style="margin-top:0">Tarif-Update</h3>
-        <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum sollen Schichten neu berechnet werden?</p>
-        <input type="date" id="refresh-date" style="margin-bottom:15px;">
-        <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
-        <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
+        <h3>Neu berechnen ab:</h3>
+        <input type="date" id="refresh-date">
+        <button onclick="recalculateFromDate()" style="background:var(--success)">STARTEN</button>
+        <button onclick="closeRefreshDialog()">ABBRECHEN</button>
     </div>
 </div>
 
@@ -174,16 +175,12 @@
     <input type="hidden" id="edit-id">
     <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
     <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
-    
-    <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
-        <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
+    <div id="bereitschaft-felder" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
+        <label>Einsatz auswärts</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
     </div>
-
     <div class="pause-box">
-        <label>Pause 1 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p1s"><select id="pd1"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">60 Min</option></select></div>
-        <label>Pause 2 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p2s"><select id="pd2"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option></select></div>
     </div>
     <div class="grid">
@@ -194,7 +191,7 @@
         </div>
     </div>
     <div class="grid" style="align-items: center; justify-content: end;">
-        <label style="display:flex; align-items:center; gap:8px; cursor: pointer;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
+        <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
     </div>
     <button id="main-btn" onclick="add()">Schicht speichern</button>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
@@ -206,20 +203,16 @@
 </div>
 
 <div id="history"></div>
-
-<div class="version-footer">
-    Aktuelle Versionsnummer 1.1<br>
-    Stand: 05.02.2026, 08:31 Uhr
-</div>
+<div class="version-footer">V 1.1 | 05.02.2026</div>
 
 <script>
     let tokenClient, gapiInited=false, gisInited=false;
-    const holidays = getHolidays(2026);
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: ''};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: '', calendarId: 'primary'};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]), openYears = new Set([new Date().getFullYear().toString()]), activeStatus = 'Dienst';
+    const holidays = getHolidays(2026);
 
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
@@ -238,7 +231,11 @@
     }
     function gisLoaded() {
         if (!config.clientId) return;
-        tokenClient = google.accounts.oauth2.initTokenClient({client_id: config.clientId, scope: 'https://www.googleapis.com/auth/calendar.events', callback: ''});
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: config.clientId, 
+            scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly', 
+            callback: ''
+        });
         gisInited = true; checkGReady();
     }
     function checkGReady() { if (gapiInited && gisInited) document.getElementById('sync-info').innerText = "Google Kalender: Bereit"; }
@@ -250,8 +247,26 @@
             document.getElementById('auth-btn').style.display = 'none';
             document.getElementById('signout-btn').style.display = 'block';
             document.getElementById('sync-all-btn').style.display = 'block';
+            listCalendars();
         };
         tokenClient.requestAccessToken({prompt: gapi.client.getToken() === null ? 'consent' : ''});
+    }
+
+    async function listCalendars() {
+        try {
+            const response = await gapi.client.calendar.calendarList.list();
+            const calendars = response.result.items;
+            const select = document.getElementById('cfg-calendarId');
+            select.innerHTML = '';
+            calendars.forEach(cal => {
+                const opt = document.createElement('option');
+                opt.value = cal.id;
+                opt.text = cal.summary + (cal.primary ? ' (Haupt)' : '');
+                if(cal.id === config.calendarId) opt.selected = true;
+                select.appendChild(opt);
+            });
+            showToast("Kalenderliste geladen");
+        } catch (e) { console.error(e); }
     }
 
     function handleSignoutClick() {
@@ -262,6 +277,7 @@
     async function syncToGoogle(r) {
         if (!gapi.client.getToken()) return;
         const st = r.status.toLowerCase();
+        const calId = document.getElementById('cfg-calendarId').value || 'primary';
         let event = { 'description': `${r.status} (${r.loc||'---'})`, 'start': {}, 'end': {} };
 
         if (['dienst', 'bereit'].includes(st)) {
@@ -280,8 +296,8 @@
 
         try {
             const req = r.gEventId ? 
-                gapi.client.calendar.events.patch({'calendarId': 'primary', 'eventId': r.gEventId, 'resource': event}) :
-                gapi.client.calendar.events.insert({'calendarId': 'primary', 'resource': event});
+                gapi.client.calendar.events.patch({'calendarId': calId, 'eventId': r.gEventId, 'resource': event}) :
+                gapi.client.calendar.events.insert({'calendarId': calId, 'resource': event});
             const res = await req; r.gEventId = res.result.id;
         } catch (e) { console.error(e); }
     }
@@ -299,38 +315,7 @@
         }
     }
 
-    function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
-    function toggleInfo() { const p=document.getElementById('info-panel'); p.style.display=p.style.display==='block'?'none':'block'; }
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
-    function openRefreshDialog() { document.getElementById('refresh-dialog').style.display='flex'; document.getElementById('refresh-date').value=new Date().toISOString().split('T')[0]; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display='none'; }
-    function recalculateFromDate() {
-        const sd=document.getElementById('refresh-date').value; if(!sd) return;
-        data=data.map(r=>r.d>=sd?calculateShift(r):r);
-        localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); closeRefreshDialog();
-    }
-    function toggleConfig() { 
-        const p=document.getElementById('config-panel'); p.style.display=p.style.display==='block'?'none':'block';
-        if(p.style.display==='block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k=>document.getElementById('cfg-'+k).value=config[k]||'');
-    }
-    function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k=>{
-            const v=document.getElementById('cfg-'+k).value; config[k]=(k==='apiKey'||k==='clientId')?v:(parseFloat(v)||0);
-        });
-        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); location.reload();
-    }
-    function autoDetectDay() {
-        const ds=document.getElementById('d').value; if(!ds) return;
-        const dt=new Date(ds); let l='🏢 WERKTAG';
-        if(holidays.includes(ds)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG';
-        document.getElementById('type-display').innerText=l;
-    }
-    function toggleStatus(st) {
-        let ds=st.charAt(0).toUpperCase()+st.slice(1);
-        activeStatus=activeStatus===ds?'Dienst':ds;
-        ['bereit','ruhe','urlaub','krank'].forEach(b=>document.getElementById('btn-'+b).classList.toggle('active', activeStatus===b.charAt(0).toUpperCase()+b.slice(1)));
-        document.getElementById('bereitschaft-felder').style.display=activeStatus==='Bereit'?'block':'none';
-    }
     function calculateShift(r) {
         let sc=r.status.toLowerCase();
         if(['dienst','krank','bereit'].includes(sc)) {
@@ -375,41 +360,35 @@
     function render() {
         const cont=document.getElementById('history'); cont.innerHTML='';
         const ts=new Date().toISOString().split('T')[0], cy=new Date().getFullYear().toString();
-        let th=0, tv=0, tn=0, tree={};
+        let th=0, tv=0, tree={};
         data.forEach(r=>{
             const y=r.d.substring(0,4), m=r.d.substring(0,7), fut=r.d>ts;
             if(!tree[y]) tree[y]={months:{}, stats:{krank:0, urlaub:0, arbeit:0, brgb:0}};
             if(!tree[y].months[m]) tree[y].months[m]={items:[], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0};
             const ys=tree[y].stats, mg=tree[y].months[m]; mg.items.push(r);
-            let s=r.status.toLowerCase();
             if(!fut){
-                if(s==='krank') ys.krank++;
-                if(s==='urlaub'&&new Date(r.d).getDay()%6!==0){ ys.urlaub++; if(y===cy) tv++; }
-                if(s==='dienst'||s==='bereit') ys.arbeit++;
+                if(r.status.toLowerCase()==='krank') ys.krank++;
+                if(r.status.toLowerCase()==='urlaub'&&new Date(r.d).getDay()%6!==0){ ys.urlaub++; if(y===cy) tv++; }
+                if(['dienst','bereit'].includes(r.status.toLowerCase())) ys.arbeit++;
                 if(r.loc==='BRGB') ys.brgb++;
                 mg.h+=r.h; mg.nH+=r.nH; mg.szH+=r.szH; mg.soH+=r.soH; mg.ftH+=r.ftH; mg.bE+=r.bonus; mg.sp+=r.spesen; mg.fE+=r.fae; mg.fC+=(r.faeCount||0); if(r.loc==='BRGB') mg.br++;
-                if(y===cy){ th+=r.h; tn+=r.nH; }
+                if(y===cy) th+=r.h;
             }
         });
         let sol=(config.jsoll/365)*Math.max(1, Math.ceil((new Date()-new Date(cy,0,1))/864e5));
         document.getElementById('h_sum').innerText=th.toFixed(2); document.getElementById('d_sum').innerText=(th-sol).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-th).toFixed(2);
-        let nsh=(config.gutschrift*60)/5, rn=0;
-        Object.keys(tree).forEach(y=>{if(y===cy) Object.keys(tree[y].months).forEach(m=>rn+=Math.round(tree[y].months[m].nH))});
         document.getElementById('vac-summary').innerText=`Urlaub: ${tv}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(rn/nsh)} Tage (${rn.toFixed(0)}/${nsh.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(th/config.jsoll*100))+"%";
-        document.getElementById('p_text').innerText=`${(th/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${cy})`;
+        document.getElementById('p_text').innerText=`${(th/config.jsoll*100).toFixed(1)}% (${cy})`;
         Object.keys(tree).sort().reverse().forEach(y=>{
             const yd=tree[y], yo=openYears.has(y);
-            let h=`<div class="year-group"><div class="month-header year-header ${yo?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yd.stats.arbeit}</span><span>Krank: ${yd.stats.krank}</span><span>Urlaub: ${yd.stats.urlaub}</span><span>BRGB: ${yd.stats.brgb}</span></div></div><div class="month-content ${yo?'open':''}">`;
+            let h=`<div class="year-group"><div class="month-header year-header ${yo?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yd.stats.arbeit}</span><span>Krank: ${yd.stats.krank}</span><span>Urlaub: ${yd.stats.urlaub}</span></div></div><div class="month-content ${yo?'open':''}">`;
             Object.keys(yd.months).sort().reverse().forEach(m=>{
-                const g=yd.months[m], mo=openMonths.has(m), [yr, mon]=m.split('-'), rnh=Math.round(g.nH), ne=rnh*config.nacht, sze=g.szH*config.samstag, soe=g.soH*config.sonntag, fte=g.ftH*config.feiertag, bz=ne+sze+soe+fte+g.bE, nv=(ne+soe+fte+g.sp+g.fE)+((sze+g.bE)*0.65);
-                h+=`<div style="margin:10px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"><div class="month-header ${mo?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mon)-1]} <b>(${g.h.toFixed(1)}h)</b></span><div class="m-stats" ${mo?'style="display:none"':''}><span>BRGB: ${g.br}x</span><span>Zul: ${bz.toFixed(2)}€</span></div></div><div class="month-content ${mo?'open':''}">
-                <div class="month-details-bar"><div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rnh}h</span> | <span class="val-eur">${ne.toFixed(2)}€</span></span></div><div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${g.fC}x</span> | <span class="val-eur">${g.fE.toFixed(2)}€</span></span></div><div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${g.szH.toFixed(2)}h</span> | <span class="val-eur">${sze.toFixed(2)}€</span></span></div><div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${g.br}x</span></div><div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${g.soH.toFixed(2)}h</span> | <span class="val-eur">${soe.toFixed(2)}€</span></span></div><div></div><div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${g.ftH.toFixed(2)}h</span> | <span class="val-eur">${fte.toFixed(2)}€</span></span></div><div></div><div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${g.bE.toFixed(2)}€</span></div></div>
-                <div class="spesen-bar">Netto-Vorschau: ~ ${nv.toFixed(2)} €</div>
+                const g=yd.months[m], mo=openMonths.has(m), mon=parseInt(m.split('-')[1]);
+                h+=`<div style="margin:10px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"><div class="month-header ${mo?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[mon-1]} <b>(${g.h.toFixed(1)}h)</b></span></div><div class="month-content ${mo?'open':''}">
                 <table>${g.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(i=>{
                     const wd=wDaysShort[new Date(i.d).getDay()], fut=i.d>ts, ds=i.status.charAt(0).toUpperCase()+i.status.slice(1);
-                    return `<tr id="row-${i.id}"><td style="${fut?'opacity:0.6':''}"><b>${wd}, ${i.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${ds}${i.edited?' ✎':''}</small></td><td style="${fut?'opacity:0.6':''}">${i.s||'--'}-${i.e||'--'}<br><small>${i.h.toFixed(1)}h${(ds==='Dienst'||ds==='Bereit')?' ('+i.loc+')':''}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${i.id})">✎</button><button class="btn-mini btn-del" onclick="del(${i.id})">🗑</button></td></tr>`;
+                    return `<tr><td style="${fut?'opacity:0.6':''}"><b>${wd}, ${i.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${ds}</small></td><td>${i.s||'--'}-${i.e||'--'}<br><small>${i.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${i.id})">✎</button><button class="btn-mini btn-del" onclick="del(${i.id})">🗑</button></td></tr>`;
                 }).join('')}</table></div></div>`;
             });
             h+=`</div></div>`; cont.innerHTML+=h;
@@ -417,18 +396,16 @@
     }
     function toggleM(m){openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render();}
     function toggleY(y){openYears.has(y)?openYears.delete(y):openYears.add(y); render();}
-    function edit(id){
-        const r=data.find(x=>x.id===id||x.id===parseInt(id)); if(!r)return;
-        document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d;
-        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f=>document.getElementById(f).value=r[f]||'');
-        ['pd1','pd2'].forEach(f=>document.getElementById(f).value=r[f]||0);
-        document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=r.tr!==undefined?!!r.tr:true;
-        document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase()); window.scrollTo(0,0);
-    }
-    function cancelEdit(){
-        document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none';
-        ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0);
-        activeStatus='Dienst'; toggleStatus('dienst');
+    function toggleStatus(st){activeStatus=st.charAt(0).toUpperCase()+st.slice(1); ['bereit','ruhe','urlaub','krank'].forEach(b=>document.getElementById('btn-'+b).classList.toggle('active', activeStatus===b.charAt(0).toUpperCase()+b.slice(1))); document.getElementById('bereitschaft-felder').style.display=activeStatus==='Bereit'?'block':'none';}
+    function showToast(txt){const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none',2500);}
+    function toggleInfo(){const p=document.getElementById('info-panel'); p.style.display=p.style.display==='block'?'none':'block';}
+    function toggleConfig(){const p=document.getElementById('config-panel'); p.style.display=p.style.display==='block'?'none':'block';}
+    function saveConfig(){
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k=>{
+            const v=document.getElementById('cfg-'+k).value; config[k]=(k==='apiKey'||k==='clientId')?v:(parseFloat(v)||0);
+        });
+        config.calendarId = document.getElementById('cfg-calendarId').value;
+        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); location.reload();
     }
     document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
 </script>
