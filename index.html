@@ -64,7 +64,6 @@
         .info-item b { color: var(--p); }
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
-        
         .sync-indicator { font-size: 0.65rem; margin-top: 4px; opacity: 0.8; }
     </style>
 </head>
@@ -134,6 +133,7 @@
         </div>
         <button id="auth-btn" onclick="handleAuthClick()" style="background:#4285F4; margin-top:10px;">GOOGLE LOGIN</button>
         <button id="signout-btn" onclick="handleSignoutClick()" style="background:#64748b; margin-top:5px; display:none;">ABMELDEN</button>
+        <button id="sync-all-btn" onclick="syncAllToGoogle()" style="background:#16a34a; margin-top:5px; display:none;">ALLE SCHICHTEN SYNC</button>
     </div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
@@ -239,6 +239,7 @@
 
     // --- GOOGLE API SETUP ---
     function gapiLoaded() {
+        if (!config.apiKey) return;
         gapi.load('client', async () => {
             await gapi.client.init({
                 apiKey: config.apiKey,
@@ -250,6 +251,7 @@
     }
 
     function gisLoaded() {
+        if (!config.clientId) return;
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: config.clientId,
             scope: 'https://www.googleapis.com/auth/calendar.events',
@@ -271,6 +273,7 @@
             document.getElementById('sync-info').innerText = "Google Kalender: Verbunden";
             document.getElementById('auth-btn').style.display = 'none';
             document.getElementById('signout-btn').style.display = 'block';
+            document.getElementById('sync-all-btn').style.display = 'block';
         };
 
         if (gapi.client.getToken() === null) {
@@ -288,6 +291,7 @@
             document.getElementById('sync-info').innerText = "Google Kalender: Abgemeldet";
             document.getElementById('auth-btn').style.display = 'block';
             document.getElementById('signout-btn').style.display = 'none';
+            document.getElementById('sync-all-btn').style.display = 'none';
         }
     }
 
@@ -326,6 +330,31 @@
             r.gEventId = response.result.id;
         } catch (err) {
             console.error("Google Sync Fehler", err);
+        }
+    }
+
+    async function syncAllToGoogle() {
+        if (!gapi.client.getToken()) {
+            alert("Bitte zuerst bei Google anmelden!");
+            return;
+        }
+        const toSync = data.filter(r => r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit');
+        if (toSync.length === 0) {
+            alert("Keine synchronisierbaren Schichten gefunden.");
+            return;
+        }
+        if (confirm(`${toSync.length} Schichten werden synchronisiert. Fortfahren?`)) {
+            document.getElementById('sync-info').innerText = "Voll-Sync läuft...";
+            let count = 0;
+            for (let r of toSync) {
+                await syncToGoogle(r);
+                count++;
+                document.getElementById('sync-info').innerText = `Voll-Sync: ${count} / ${toSync.length}`;
+            }
+            localStorage.setItem('shifts_p10', JSON.stringify(data));
+            render();
+            document.getElementById('sync-info').innerText = "Google Kalender: Alle Schichten aktuell";
+            showToast("Voll-Sync abgeschlossen!");
         }
     }
 
@@ -406,7 +435,7 @@
             config[k] = (k === 'apiKey' || k === 'clientId') ? val : (parseFloat(val) || 0);
         });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); 
-        location.reload(); // Reload to init GAPI with new keys
+        location.reload(); 
     }
 
     function autoDetectDay() {
@@ -464,15 +493,12 @@
         const id=document.getElementById('edit-id').value;
         let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
         
-        // Find existing gEventId if editing
         if (id) {
             const old = data.find(x => x.id === parseInt(id));
             if (old && old.gEventId) r.gEventId = old.gEventId;
         }
 
         r=calculateShift(r); 
-        
-        // Google Sync
         await syncToGoogle(r);
 
         if(id) {
@@ -572,11 +598,7 @@
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
 
-    // Google Libs loading
-    window.onload = () => { if(config.apiKey && config.clientId) { gapiLoaded(); gisLoaded(); } };
     document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
 </script>
-<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
