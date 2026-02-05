@@ -124,6 +124,18 @@
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--p);">Google Kalender Sync</label>
+        <div style="margin-bottom: 10px;">
+            <label>API Key</label>
+            <input type="password" id="cfg-apiKey" placeholder="AIza...">
+        </div>
+        <div>
+            <label>Client ID</label>
+            <input type="text" id="cfg-clientId" placeholder="...apps.googleusercontent.com">
+        </div>
+    </div>
+    <hr>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
         <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
         <button onclick="exportData()" style="background:#475569; margin-top:0; font-size:0.9rem;">📥 BACKUP KOPIEREN</button>
         <button onclick="exportJSONFile()" style="background:#2563eb; margin-top:8px; font-size:0.9rem;">💾 ALS .JSON SPEICHERN</button>
@@ -212,7 +224,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: ''};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -305,10 +317,13 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || '');
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => { 
+            const val = document.getElementById('cfg-'+k).value;
+            config[k] = (k === 'apiKey' || k === 'clientId') ? val : (parseFloat(val) || 0);
+        });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
     function autoDetectDay() {
