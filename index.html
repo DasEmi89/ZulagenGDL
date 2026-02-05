@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
     <title>Lok-Zulagen Rechner V84</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
     <style>
         :root { --p: #2563eb; --bg: #f8fafc; --text: #1e293b; --warn: #f59e0b; --danger: #ef4444; --success: #16a34a; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 15px 30px; }
@@ -23,12 +25,10 @@
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; }
         .btn-sub.active { background: var(--success) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
         .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
-        
         .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
-        
         .month-details-bar { background: #1a222f; color: #cbd5e0; padding: 12px 15px; font-size: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; border-bottom: 2px solid #2d3748; }
         .detail-row { display: flex; justify-content: space-between; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid transparent; }
         .row-nazu { border-left-color: #38bdf8; }
@@ -42,7 +42,6 @@
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
         .spesen-bar { background: #111827; color: #4ade80; padding: 10px 15px; font-size: 0.9rem; border-bottom: 1px solid #4a5568; font-weight: bold; }
-        
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; }
@@ -61,13 +60,11 @@
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
-        
-        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
-        
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
+        .sync-indicator { font-size: 0.65rem; margin-top: 4px; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -81,6 +78,7 @@
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
+    <div id="sync-info" class="sync-indicator">Kalender: Nicht verbunden</div>
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
         <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
@@ -122,6 +120,21 @@
     <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
+    <hr>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--p);">Google Kalender Sync</label>
+        <div style="margin-bottom: 10px;">
+            <label>API Key</label>
+            <input type="password" id="cfg-apiKey" placeholder="AIza...">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Client ID</label>
+            <input type="text" id="cfg-clientId" placeholder="...apps.googleusercontent.com">
+        </div>
+        <button id="auth-btn" onclick="handleAuthClick()" style="background:#4285F4; margin-top:10px;">GOOGLE LOGIN</button>
+        <button id="signout-btn" onclick="handleSignoutClick()" style="background:#64748b; margin-top:5px; display:none;">ABMELDEN</button>
+        <button id="sync-all-btn" onclick="syncAllToGoogle()" style="background:#16a34a; margin-top:5px; display:none;">ALLE SCHICHTEN SYNC</button>
+    </div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
         <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
@@ -196,10 +209,16 @@
 
 <div class="version-footer">
     Aktuelle Versionsnummer 1.1<br>
-    Stand: 03.02.2026, 08:31 Uhr
+    Stand: 05.02.2026, 08:31 Uhr
 </div>
 
 <script>
+    // --- GOOGLE API GLOBALS ---
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
+
+    // --- BASE LOGIC ---
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
         const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), n = Math.floor((h + l - 7 * m + 114) / 31), p = (h + l - 7 * m + 114) % 31;
@@ -212,19 +231,142 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: ''};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
     let activeStatus = 'Dienst';
 
+    // --- GOOGLE API SETUP ---
+    function gapiLoaded() {
+        if (!config.apiKey) return;
+        gapi.load('client', async () => {
+            await gapi.client.init({
+                apiKey: config.apiKey,
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+            });
+            gapiInited = true;
+            checkGReady();
+        });
+    }
+
+    function gisLoaded() {
+        if (!config.clientId) return;
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: config.clientId,
+            scope: 'https://www.googleapis.com/auth/calendar.events',
+            callback: '', // wird bei Bedarf gesetzt
+        });
+        gisInited = true;
+        checkGReady();
+    }
+
+    function checkGReady() {
+        if (gapiInited && gisInited) {
+            document.getElementById('sync-info').innerText = "Google Kalender: Bereit zum Login";
+        }
+    }
+
+    function handleAuthClick() {
+        tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) throw (resp);
+            document.getElementById('sync-info').innerText = "Google Kalender: Verbunden";
+            document.getElementById('auth-btn').style.display = 'none';
+            document.getElementById('signout-btn').style.display = 'block';
+            document.getElementById('sync-all-btn').style.display = 'block';
+        };
+
+        if (gapi.client.getToken() === null) {
+            tokenClient.requestAccessToken({prompt: 'consent'});
+        } else {
+            tokenClient.requestAccessToken({prompt: ''});
+        }
+    }
+
+    function handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+            google.accounts.oauth2.revoke(token.access_token);
+            gapi.client.setToken('');
+            document.getElementById('sync-info').innerText = "Google Kalender: Abgemeldet";
+            document.getElementById('auth-btn').style.display = 'block';
+            document.getElementById('signout-btn').style.display = 'none';
+            document.getElementById('sync-all-btn').style.display = 'none';
+        }
+    }
+
+    async function syncToGoogle(r) {
+        if (!gapi.client.getToken()) return;
+        if (r.status.toLowerCase() === 'ruhe' || r.status.toLowerCase() === 'krank') return;
+
+        const startStr = `${r.d}T${r.s}:00`;
+        let endDate = new Date(`${r.d}T${r.e}:00`);
+        if (timeToDec(r.e) <= timeToDec(r.s)) {
+            endDate.setDate(endDate.getDate() + 1);
+        }
+        const endStr = endDate.toISOString().split('.')[0];
+
+        const event = {
+            'summary': `${r.status} (${r.loc})`,
+            'start': { 'dateTime': startStr, 'timeZone': 'Europe/Berlin' },
+            'end': { 'dateTime': endStr, 'timeZone': 'Europe/Berlin' }
+        };
+
+        try {
+            let request;
+            if (r.gEventId) {
+                request = gapi.client.calendar.events.patch({
+                    'calendarId': 'primary',
+                    'eventId': r.gEventId,
+                    'resource': event
+                });
+            } else {
+                request = gapi.client.calendar.events.insert({
+                    'calendarId': 'primary',
+                    'resource': event
+                });
+            }
+            const response = await request;
+            r.gEventId = response.result.id;
+        } catch (err) {
+            console.error("Google Sync Fehler", err);
+        }
+    }
+
+    async function syncAllToGoogle() {
+        if (!gapi.client.getToken()) {
+            alert("Bitte zuerst bei Google anmelden!");
+            return;
+        }
+        const toSync = data.filter(r => r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit');
+        if (confirm(`${toSync.length} Schichten werden synchronisiert. Fortfahren?`)) {
+            document.getElementById('sync-info').innerText = "Voll-Sync läuft...";
+            let count = 0;
+            for (let r of toSync) {
+                await syncToGoogle(r);
+                count++;
+                document.getElementById('sync-info').innerText = `Voll-Sync: ${count} / ${toSync.length}`;
+            }
+            localStorage.setItem('shifts_p10', JSON.stringify(data));
+            render();
+            document.getElementById('sync-info').innerText = "Google Kalender: Aktuell";
+            showToast("Voll-Sync abgeschlossen!");
+        }
+    }
+
+    // --- INITIALISIERUNG BEIM LADEN ---
+    window.onload = () => {
+        if (window.gapi) gapiLoaded();
+        if (window.google) gisLoaded();
+    };
+
+    // --- UI LOGIC (REINIGUNG) ---
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
     function toggleInfo() {
         const p = document.getElementById('info-panel');
-        const isOpen = p.style.display === 'block';
-        p.style.display = isOpen ? 'none' : 'block';
-        if(!isOpen) {
+        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        if(p.style.display === 'block') {
             document.getElementById('inf-spesen').innerText = `${config.v1.toFixed(2)} / ${config.v2.toFixed(2)} / ${config.v3.toFixed(2)} €`;
             document.getElementById('inf-fae').innerText = `${config.fahrt.toFixed(2)} €`;
             document.getElementById('inf-gut').innerText = `${config.gutschrift.toFixed(1)} h`;
@@ -234,7 +376,7 @@
 
     async function exportData() {
         const str = JSON.stringify({ data, config, date: new Date().toLocaleString() });
-        try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
+        try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Fehler"); }
     }
 
     function exportJSONFile() {
@@ -242,12 +384,8 @@
         const blob = new Blob([str], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `Schichten_Backup_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `Backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
 
     function toggleImport() {
@@ -256,43 +394,26 @@
     }
 
     function processFileImport(input) {
-        const file = input.files[0];
-        if (!file) return;
+        const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
-            applyImportData(e.target.result);
-            input.value = '';
-        };
+        reader.onload = (e) => { applyImportData(e.target.result); input.value = ''; };
         reader.readAsText(file);
     }
 
     function processImport() {
         const raw = document.getElementById('import-area').value.trim();
-        if(!raw) return;
-        applyImportData(raw);
+        if(!raw) return; applyImportData(raw);
     }
 
     function applyImportData(jsonStr) {
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id))
-                    .map(item => {
-                        if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
-                        return item;
-                    });
-                data = [...data, ...newItems];
-                localStorage.setItem('shifts_p10', JSON.stringify(data));
-                render();
-                toggleImport();
-                document.getElementById('import-area').value = '';
-                alert(newItems.length + " neue Schichten erfolgreich hinzugefügt!");
-            } else {
-                alert("Format ungültig.");
+                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id)).map(item => { if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000); return item; });
+                data = [...data, ...newItems]; localStorage.setItem('shifts_p10', JSON.stringify(data));
+                render(); toggleImport(); showToast("Import erfolgreich!");
             }
-        } catch(e) {
-            alert("Fehler beim Verarbeiten.");
-        }
+        } catch(e) { alert("Formatfehler"); }
     }
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
@@ -305,11 +426,11 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || '');
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
-        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => { config[k] = (k === 'apiKey' || k === 'clientId') ? document.getElementById('cfg-'+k).value : (parseFloat(document.getElementById('cfg-'+k).value) || 0); });
+        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); location.reload(); 
     }
     function autoDetectDay() {
         const dStr = document.getElementById('d').value; if(!dStr) return;
@@ -332,9 +453,7 @@
         let statusCheck = r.status.toLowerCase();
         if(['dienst','krank','bereit'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
-            if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
-                r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
-            }
+            if(statusCheck === 'krank' && (t1 === null || t2 === null)) { r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r; }
             if(t1===null || t2===null) return r;
             if(t2<=t1) t2+=24;
             let n=0, sz=0, so=0, ft=0, w=0;
@@ -343,10 +462,7 @@
                 if(!p.some(pa => i>=pa.s && i<pa.e)) {
                     w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                     let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
-                    if(c>=20 || c<6) n+=(1/60); 
-                    if(isF) ft+=(1/60); 
-                    else if(isO) so+=(1/60); 
-                    else if(isA && c>=13 && c<20) sz+=(1/60);
+                    if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
@@ -366,41 +482,31 @@
         return r;
     }
 
-    function add() {
+    async function add() {
         const d=document.getElementById('d').value; if(!d) return;
         const id=document.getElementById('edit-id').value;
         let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
         r=calculateShift(r); 
         
+        // Google Sync beim Speichern
+        await syncToGoogle(r);
+
         if(id) {
             const idx = data.findIndex(x => x.id === parseInt(id));
-            if(idx !== -1) {
-                r.edited = true; // Flag setzen
-                data[idx] = r;
-            }
+            if(idx !== -1) { r.edited = true; data[idx] = r; }
         } else {
             data.push(r);
         }
         
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
-        
-        // Nach dem Speichern zur Schicht springen
         setTimeout(() => {
             const target = document.getElementById('row-' + r.id);
-            if(target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.classList.add('highlight-edit');
-                setTimeout(() => target.classList.remove('highlight-edit'), 3000);
-            }
+            if(target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.add('highlight-edit'); setTimeout(() => target.classList.remove('highlight-edit'), 3000); }
         }, 100);
     }
 
     function del(id) { 
-        if(confirm('Möchtest du diese Schicht wirklich unwiderruflich löschen?')) { 
-            data=data.filter(r=>r.id!==id); 
-            localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            render(); 
-        } 
+        if(confirm('Löschen?')) { data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } 
     }
 
     function render() {
@@ -408,30 +514,21 @@
         const todayStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
         let tH_total=0, tV_total=0, tN_total=0; 
-        
         const tree = {};
+        
         data.forEach(r => {
-            const y = r.d.substring(0,4);
-            const m = r.d.substring(0,7);
-            const isFuture = r.d > todayStr;
-            
+            const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
-            
-            const yS = tree[y].stats;
-            const mG = tree[y].months[m];
-            
+            const yS = tree[y].stats, mG = tree[y].months[m];
             mG.items.push(r);
-            
             let st = r.status.toLowerCase();
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit') yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
-                
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
-                
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
@@ -439,120 +536,51 @@
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
-        
         let roundedTotalN = 0;
-        Object.keys(tree).forEach(y => {
-            if(y === currentYear) {
-                Object.keys(tree[y].months).forEach(m => {
-                   let rawM = tree[y].months[m].nH;
-                   roundedTotalN += Math.round(rawM);
-                });
-            }
-        });
-
+        Object.keys(tree).forEach(y => { if(y === currentYear) Object.keys(tree[y].months).forEach(m => roundedTotalN += Math.round(tree[y].months[m].nH)); });
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
-        
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
 
         Object.keys(tree).sort().reverse().forEach(y => {
-            const yData = tree[y];
-            const yOpen = openYears.has(y);
-            
-            let yearHtml = `<div class="year-group">
-                <div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')">
-                    <span>JAHR ${y}</span>
-                    <div class="m-stats">
-                        <span>Arbeit: ${yData.stats.arbeit}</span>
-                        <span>Krank: ${yData.stats.krank}</span>
-                        <span>Urlaub: ${yData.stats.urlaub}</span>
-                        <span>BRGB: ${yData.stats.brgb}</span>
-                    </div>
-                </div>
-                <div class="month-content ${yOpen?'open':''}">`;
-
+            const yData = tree[y], yOpen = openYears.has(y);
+            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Krank: ${yData.stats.krank}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             Object.keys(yData.months).sort().reverse().forEach(m => {
-                const mG = yData.months[m];
-                const mOpen = openMonths.has(m);
-                const [yr, mo] = m.split('-');
-                
-                const roundedM_NH = Math.round(mG.nH);
-                const nE = roundedM_NH * config.nacht;
-                
-                const szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
-                const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
-                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
-
-                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                    <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
-                        <span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span>
-                        <div class="m-stats" ${mOpen?'style="display:none"':''}>
-                            <span>BRGB: ${mG.br}x</span>
-                            <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
-                        </div>
-                    </div>
-                    <div class="month-content ${mOpen?'open':''}">
+                const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
+                const roundedM_NH = Math.round(mG.nH), nE = roundedM_NH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, bruttoZulagen = nE + szE + soE + ftE + mG.bE, nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                            <div></div>
-                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                            <div></div>
-                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div></div><div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div></div><div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                         </div>
                         <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
-                            const wd = wDaysShort[new Date(item.d).getDay()];
-                            const isFuture = item.d > todayStr;
-                            const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
-                            const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
-                            const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎ (bearbeitet)</small>' : '';
-                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
-                        }).join('')}</table>
-                    </div>
-                </div>`;
+                            const wd = wDaysShort[new Date(item.d).getDay()], isFuture = item.d > todayStr, dispS = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+                            const locText = (dispS === 'Dienst' || dispS === 'Bereit') ? ` (${item.loc})` : '';
+                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎</small>' : '';
+                            return `<tr id="row-${item.id}"><td style="${isFuture?'opacity:0.6':''}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${dispS}${editedLabel}</small></td><td style="${isFuture?'opacity:0.6':''}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                        }).join('')}</table></div></div>`;
             });
-
-            yearHtml += `</div></div>`;
-            cont.innerHTML += yearHtml;
+            yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
         });
     }
 
     function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
-    
     function edit(id) { 
-        const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
-        if(!r) return;
-        
-        document.getElementById('edit-id').value=r.id; 
-        document.getElementById('d').value=r.d; 
-        document.getElementById('s').value=r.s||''; 
-        document.getElementById('e').value=r.e||''; 
-        document.getElementById('ev').value=r.ev||''; 
-        document.getElementById('eb').value=r.eb||''; 
-        document.getElementById('p1s').value=r.p1s||''; 
-        document.getElementById('pd1').value=r.pd1||0; 
-        document.getElementById('p2s').value=r.p2s||''; 
-        document.getElementById('pd2').value=r.pd2||0; 
-        document.getElementById('loc').value=r.loc||'BHF'; 
-        document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
-        document.getElementById('korrHin').value=r.korrHin||''; 
-        document.getElementById('korrRueck').value=r.korrRueck||''; 
-        
-        document.getElementById('edit-id-view').style.display='block'; 
-        document.getElementById('btn-cancel-edit').style.display='flex'; 
-        
-        toggleStatus(r.status.toLowerCase()); 
-        autoDetectDay();
-        document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const r=data.find(x=>x.id===id || x.id === parseInt(id)); if(!r) return;
+        document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
+        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
+        ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
+        document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true;
+        document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase()); window.scrollTo(0,0); 
     }
-    
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
         ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
