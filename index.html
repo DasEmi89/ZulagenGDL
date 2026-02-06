@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
-    <title>Lok-Zulagen Rechner V84</title>
+    <title>Lok-Zulagen Rechner V84 - STABLE</title>
     <style>
         :root { --p: #2563eb; --bg: #f8fafc; --text: #1e293b; --warn: #f59e0b; --danger: #ef4444; --success: #16a34a; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 15px 30px; }
@@ -23,12 +23,10 @@
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; }
         .btn-sub.active { background: var(--success) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
         .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
-        
         .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
-        
         .month-details-bar { background: #1a222f; color: #cbd5e0; padding: 12px 15px; font-size: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; border-bottom: 2px solid #2d3748; }
         .detail-row { display: flex; justify-content: space-between; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid transparent; }
         .row-nazu { border-left-color: #38bdf8; }
@@ -42,7 +40,6 @@
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
         .spesen-bar { background: #111827; color: #4ade80; padding: 10px 15px; font-size: 0.9rem; border-bottom: 1px solid #4a5568; font-weight: bold; }
-        
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; }
@@ -61,11 +58,8 @@
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
-        
-        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
-        
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
     </style>
@@ -161,12 +155,10 @@
     <input type="hidden" id="edit-id">
     <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
     <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
-    
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
         <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
     </div>
-
     <div class="pause-box">
         <label>Pause 1 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p1s"><select id="pd1"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">60 Min</option></select></div>
@@ -195,8 +187,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.1<br>
-    Stand: 03.02.2026, 08:31 Uhr
+    Lok-Zulagen Rechner V1.1 - Philipp Reiß<br>
+    Stand: 06.02.2026
 </div>
 
 <script>
@@ -222,7 +214,7 @@
 
     function toggleInfo() {
         const p = document.getElementById('info-panel');
-        const isOpen = p.style.display === 'block';
+        const isOpen = (p.style.display === 'block');
         p.style.display = isOpen ? 'none' : 'block';
         if(!isOpen) {
             document.getElementById('inf-spesen').innerText = `${config.v1.toFixed(2)} / ${config.v2.toFixed(2)} / ${config.v3.toFixed(2)} €`;
@@ -274,24 +266,28 @@
 
     function applyImportData(jsonStr) {
         try {
-            const p = JSON.parse(jsonStr);
-            if(p.data && Array.isArray(p.data)) {
-                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id))
-                    .map(item => {
-                        if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
-                        return item;
-                    });
+            const parsed = JSON.parse(jsonStr);
+            // STABILE ERKENNUNG: Sucht im Objekt nach 'data', sonst nimmt es das Array direkt
+            const importList = (parsed.data && Array.isArray(parsed.data)) ? parsed.data : (Array.isArray(parsed) ? parsed : null);
+            
+            if(importList) {
+                const newItems = importList.map((newItem, idx) => {
+                    // ID Sicherstellung: Immer als String behandeln
+                    if (!newItem.id) newItem.id = "ID-" + Date.now() + "-" + idx;
+                    return calculateShift(newItem);
+                }).filter(newItem => !data.some(existing => String(existing.id) === String(newItem.id)));
+                
                 data = [...data, ...newItems];
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
                 toggleImport();
                 document.getElementById('import-area').value = '';
-                alert(newItems.length + " neue Schichten erfolgreich hinzugefügt!");
+                alert(newItems.length + " Schichten erfolgreich importiert!");
             } else {
-                alert("Format ungültig.");
+                alert("Fehler: Keine gültigen Schichtdaten gefunden.");
             }
         } catch(e) {
-            alert("Fehler beim Verarbeiten.");
+            alert("Fehler beim Verarbeiten: Bitte prüfe das JSON-Format.");
         }
     }
 
@@ -344,9 +340,7 @@
                     w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                     let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
                     if(c>=20 || c<6) n+=(1/60); 
-                    if(isF) ft+=(1/60); 
-                    else if(isO) so+=(1/60); 
-                    else if(isA && c>=13 && c<20) sz+=(1/60);
+                    if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
@@ -368,23 +362,17 @@
 
     function add() {
         const d=document.getElementById('d').value; if(!d) return;
-        const id=document.getElementById('edit-id').value;
-        let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+        const editId=document.getElementById('edit-id').value;
+        let r={ d, status:activeStatus, id:editId ? editId : ("ID-" + Date.now()), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
         r=calculateShift(r); 
         
-        if(id) {
-            const idx = data.findIndex(x => x.id === parseInt(id));
-            if(idx !== -1) {
-                r.edited = true; // Flag setzen
-                data[idx] = r;
-            }
-        } else {
-            data.push(r);
-        }
+        if(editId) {
+            const idx = data.findIndex(x => String(x.id) === String(editId));
+            if(idx !== -1) { r.edited = true; data[idx] = r; } else { data.push(r); }
+        } else { data.push(r); }
         
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
         
-        // Nach dem Speichern zur Schicht springen
         setTimeout(() => {
             const target = document.getElementById('row-' + r.id);
             if(target) {
@@ -396,10 +384,9 @@
     }
 
     function del(id) { 
-        if(confirm('Möchtest du diese Schicht wirklich unwiderruflich löschen?')) { 
-            data=data.filter(r=>r.id!==id); 
-            localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            render(); 
+        if(confirm('Wirklich löschen?')) { 
+            data=data.filter(r=>String(r.id)!==String(id)); 
+            localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); 
         } 
     }
 
@@ -408,89 +395,60 @@
         const todayStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
         let tH_total=0, tV_total=0, tN_total=0; 
-        
         const tree = {};
+        
         data.forEach(r => {
             const y = r.d.substring(0,4);
             const m = r.d.substring(0,7);
             const isFuture = r.d > todayStr;
-            
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
-            
             const yS = tree[y].stats;
             const mG = tree[y].months[m];
-            
             mG.items.push(r);
-            
             let st = r.status.toLowerCase();
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit') yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
-                
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
-                
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
 
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
-        const nSollH = (config.gutschrift * 60) / 5;
         
+        const nSollH = (config.gutschrift * 60) / 5;
         let roundedTotalN = 0;
         Object.keys(tree).forEach(y => {
             if(y === currentYear) {
-                Object.keys(tree[y].months).forEach(m => {
-                   let rawM = tree[y].months[m].nH;
-                   roundedTotalN += Math.round(rawM);
-                });
+                Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); });
             }
         });
 
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
-        
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
 
         Object.keys(tree).sort().reverse().forEach(y => {
-            const yData = tree[y];
-            const yOpen = openYears.has(y);
-            
+            const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group">
                 <div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')">
                     <span>JAHR ${y}</span>
-                    <div class="m-stats">
-                        <span>Arbeit: ${yData.stats.arbeit}</span>
-                        <span>Krank: ${yData.stats.krank}</span>
-                        <span>Urlaub: ${yData.stats.urlaub}</span>
-                        <span>BRGB: ${yData.stats.brgb}</span>
-                    </div>
+                    <div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Urlaub: ${yData.stats.urlaub}</span></div>
                 </div>
                 <div class="month-content ${yOpen?'open':''}">`;
-
+            
             Object.keys(yData.months).sort().reverse().forEach(m => {
-                const mG = yData.months[m];
-                const mOpen = openMonths.has(m);
-                const [yr, mo] = m.split('-');
-                
-                const roundedM_NH = Math.round(mG.nH);
-                const nE = roundedM_NH * config.nacht;
-                
-                const szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
-                const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
-                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
-
+                const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
+                const roundedM_NH = Math.round(mG.nH), nE = roundedM_NH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, bruttoZulagen = nE + szE + soE + ftE + mG.bE, nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
                 yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                     <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
                         <span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span>
-                        <div class="m-stats" ${mOpen?'style="display:none"':''}>
-                            <span>BRGB: ${mG.br}x</span>
-                            <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
-                        </div>
+                        <div class="m-stats" ${mOpen?'style="display:none"':''}><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div>
                     </div>
                     <div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
@@ -499,25 +457,17 @@
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                            <div></div>
                             <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                            <div></div>
                             <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                         </div>
                         <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
-                            const wd = wDaysShort[new Date(item.d).getDay()];
-                            const isFuture = item.d > todayStr;
-                            const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
-                            const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
-                            const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎ (bearbeitet)</small>' : '';
-                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                            const wd = wDaysShort[new Date(item.d).getDay()], isFuture = item.d > todayStr, locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '', displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1), rowOpacity = isFuture ? 'opacity: 0.6;' : '', editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎</small>' : '';
+                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit('${item.id}')">✎</button><button class="btn-mini btn-del" onclick="del('${item.id}')">🗑</button></td></tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
             });
-
             yearHtml += `</div></div>`;
             cont.innerHTML += yearHtml;
         });
@@ -527,30 +477,19 @@
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
     
     function edit(id) { 
-        const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
+        const r = data.find(x => String(x.id) === String(id)); 
         if(!r) return;
-        
-        document.getElementById('edit-id').value=r.id; 
-        document.getElementById('d').value=r.d; 
-        document.getElementById('s').value=r.s||''; 
-        document.getElementById('e').value=r.e||''; 
-        document.getElementById('ev').value=r.ev||''; 
-        document.getElementById('eb').value=r.eb||''; 
-        document.getElementById('p1s').value=r.p1s||''; 
-        document.getElementById('pd1').value=r.pd1||0; 
-        document.getElementById('p2s').value=r.p2s||''; 
-        document.getElementById('pd2').value=r.pd2||0; 
-        document.getElementById('loc').value=r.loc||'BHF'; 
-        document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
-        document.getElementById('korrHin').value=r.korrHin||''; 
-        document.getElementById('korrRueck').value=r.korrRueck||''; 
-        
-        document.getElementById('edit-id-view').style.display='block'; 
-        document.getElementById('btn-cancel-edit').style.display='flex'; 
-        
+        document.getElementById('edit-id').value = String(r.id); 
+        document.getElementById('d').value = r.d; 
+        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
+        ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
+        document.getElementById('loc').value = r.loc || 'BHF'; 
+        document.getElementById('tr').checked = (r.tr !== undefined) ? !!r.tr : true; 
+        document.getElementById('edit-id-view').style.display = 'block'; 
+        document.getElementById('btn-cancel-edit').style.display = 'flex'; 
         toggleStatus(r.status.toLowerCase()); 
         autoDetectDay();
-        document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     function cancelEdit() { 
@@ -558,8 +497,7 @@
         ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
-    document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
+    render();
 </script>
 </body>
 </html>
-
