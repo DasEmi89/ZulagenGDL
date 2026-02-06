@@ -187,8 +187,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Lok-Zulagen Rechner V1.1 - Philipp Reiß<br>
-    Stand: 06.02.2026
+    Lok-Zulagen Rechner V1.1 - STABLE<br>
+    Stand: 06.02.2026, 15:30 Uhr
 </div>
 
 <script>
@@ -214,7 +214,7 @@
 
     function toggleInfo() {
         const p = document.getElementById('info-panel');
-        const isOpen = (p.style.display === 'block');
+        const isOpen = p.style.display === 'block';
         p.style.display = isOpen ? 'none' : 'block';
         if(!isOpen) {
             document.getElementById('inf-spesen').innerText = `${config.v1.toFixed(2)} / ${config.v2.toFixed(2)} / ${config.v3.toFixed(2)} €`;
@@ -266,14 +266,16 @@
 
     function applyImportData(jsonStr) {
         try {
-            const parsed = JSON.parse(jsonStr);
-            // STABILE ERKENNUNG: Sucht im Objekt nach 'data', sonst nimmt es das Array direkt
+            // Bereinigung von unsichtbaren Zeichen, falls vorhanden
+            const cleanStr = jsonStr.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+            const parsed = JSON.parse(cleanStr);
             const importList = (parsed.data && Array.isArray(parsed.data)) ? parsed.data : (Array.isArray(parsed) ? parsed : null);
             
             if(importList) {
                 const newItems = importList.map((newItem, idx) => {
-                    // ID Sicherstellung: Immer als String behandeln
                     if (!newItem.id) newItem.id = "ID-" + Date.now() + "-" + idx;
+                    // Stelle sicher, dass die ID immer ein String ist für stabilen Vergleich
+                    newItem.id = String(newItem.id);
                     return calculateShift(newItem);
                 }).filter(newItem => !data.some(existing => String(existing.id) === String(newItem.id)));
                 
@@ -284,10 +286,10 @@
                 document.getElementById('import-area').value = '';
                 alert(newItems.length + " Schichten erfolgreich importiert!");
             } else {
-                alert("Fehler: Keine gültigen Schichtdaten gefunden.");
+                alert("Fehler: Keine gültigen Schichtdaten im JSON gefunden.");
             }
         } catch(e) {
-            alert("Fehler beim Verarbeiten: Bitte prüfe das JSON-Format.");
+            alert("Fehler beim Verarbeiten: Bitte prüfe das JSON-Format auf Vollständigkeit.");
         }
     }
 
