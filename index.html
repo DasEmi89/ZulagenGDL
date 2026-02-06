@@ -265,11 +265,26 @@
             if (stLow === 'dienst' || stLow === 'bereit' || stLow === 'dispo') {
                 let label = stLow === 'dispo' ? 'Dispo' : 'Arbeit';
                 summary = `${label} ${r.s||''}-${r.e||''}`;
+                
                 if (r.s && r.e) {
+                    // Startzeitpunkt
                     s = `${cleanD}T${r.s.replace(":", "")}00`;
-                    let endObj = new Date(`${r.d}T${r.e}:00`);
-                    if (timeToDec(r.e) <= timeToDec(r.s)) endObj.setDate(endObj.getDate() + 1);
-                    e = `${endObj.getFullYear()}${String(endObj.getMonth()+1).padStart(2,'0')}${String(endObj.getDate()).padStart(2,'0')}T${r.e.replace(":", "")}00`;
+                    
+                    // --- NEUE NACHTSCHICHT LOGIK ---
+                    let startDec = timeToDec(r.s);
+                    let endDec = timeToDec(r.e);
+                    let endObj = new Date(r.d + "T" + r.e + ":00");
+                    
+                    // Wenn Endzeit vor oder gleich Startzeit liegt -> Tagessprung
+                    if (endDec <= startDec) {
+                        endObj.setDate(endObj.getDate() + 1);
+                    }
+                    
+                    // Enddatum für iCal formatieren (YYYYMMDD)
+                    let ey = endObj.getFullYear();
+                    let em = String(endObj.getMonth() + 1).padStart(2, '0');
+                    let ed = String(endObj.getDate()).padStart(2, '0');
+                    e = `${ey}${em}${ed}T${r.e.replace(":", "")}00`;
                 }
             } else if (stLow === 'urlaub' || stLow === 'krank' || stLow === 'ruhe') {
                 summary = r.status.charAt(0).toUpperCase() + r.status.slice(1);
