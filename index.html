@@ -173,33 +173,54 @@
     <div id="btn-cancel-edit" class="btn-close-edit" onclick="cancelEdit()">×</div>
     <div id="edit-id-view" style="display:none; color:var(--warn); font-weight:bold; margin-bottom:10px; text-align:center;">✎ BEARBEITEN AKTIV</div>
     <input type="hidden" id="edit-id">
-    <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
-    <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
     
+    <div id="date-range-fields" style="display:none; background:#f1f5f9; padding:12px; border-radius:12px; margin-bottom:12px; border:1px solid #e2e8f0;">
+        <label style="color:var(--p); margin-bottom:8px; display:block;">Zeitraum festlegen</label>
+        <div class="grid">
+            <div><label>Start</label><input type="date" id="d_start"></div>
+            <div><label>Ende</label><input type="date" id="d_end"></div>
+        </div>
+    </div>
+
+    <div id="standard-date-field">
+        <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
+    </div>
+
+    <div id="time-fields">
+        <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
+    </div>
+    
+    <div id="dispo-quick-select" style="display:none; margin-bottom:12px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('04:00','12:00')">Früh (4-12)</button>
+        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('12:00','20:00')">Tag (12-20)</button>
+        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('20:00','04:00')">Nacht (20-4)</button>
+    </div>
+
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
         <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
     </div>
 
-    <div class="pause-box">
+    <div id="work-details" class="pause-box">
         <label>Pause 1 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p1s"><select id="pd1"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">60 Min</option></select></div>
         <label>Pause 2 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p2s"><select id="pd2"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option></select></div>
     </div>
-    <div class="grid">
+    <div id="loc-details" class="grid">
         <div><label>Ort</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
             <div><label>Korr. Hin</label><input type="number" id="korrHin" placeholder="Min"></div>
             <div><label>Korr. Rück</label><input type="number" id="korrRueck" placeholder="Min"></div>
         </div>
     </div>
-    <div class="grid" style="align-items: center; justify-content: end;">
+    <div id="fae-details" class="grid" style="align-items: center; justify-content: end;">
         <label style="display:flex; align-items:center; gap:8px; cursor: pointer;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
     </div>
     <button id="main-btn" onclick="add()">Schicht speichern</button>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
         <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereitschaft</button>
+        <button id="btn-dispo" class="btn-sub" onclick="toggleStatus('dispo')">Dispo</button>
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
@@ -209,8 +230,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer V84-GH<br>
-    Stand: 05.02.2026, 15:10 Uhr
+    Aktuelle Versionsnummer V84-GH-DISPO<br>
+    Stand: 06.02.2026, 08:30 Uhr
 </div>
 
 <script>
@@ -241,8 +262,9 @@
             let summary = "";
             let s = "", e = "";
 
-            if (stLow === 'dienst' || stLow === 'bereit') {
-                summary = `Arbeit ${r.s||''}-${r.e||''}`;
+            if (stLow === 'dienst' || stLow === 'bereit' || stLow === 'dispo') {
+                let label = stLow === 'dispo' ? 'Dispo' : 'Arbeit';
+                summary = `${label} ${r.s||''}-${r.e||''}`;
                 if (r.s && r.e) {
                     s = `${cleanD}T${r.s.replace(":", "")}00`;
                     let endObj = new Date(`${r.d}T${r.e}:00`);
@@ -299,7 +321,6 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    // apiKey jetzt leer gelassen
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: 'DasEmi89/ZulagenGDL'};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
@@ -407,16 +428,39 @@
     function toggleStatus(st) { 
         let displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        ['bereit','ruhe','urlaub','krank'].forEach(b => {
+        
+        const isRangeStatus = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
+        document.getElementById('date-range-fields').style.display = isRangeStatus ? 'block' : 'none';
+        document.getElementById('standard-date-field').style.display = isRangeStatus ? 'none' : 'block';
+        document.getElementById('dispo-quick-select').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
+        
+        // Hide/Show relevant sections
+        const hideForRange = isRangeStatus;
+        document.getElementById('time-fields').style.display = hideForRange ? 'none' : 'block';
+        document.getElementById('work-details').style.display = hideForRange ? 'none' : 'block';
+        document.getElementById('loc-details').style.display = hideForRange ? 'none' : 'block';
+        document.getElementById('fae-details').style.display = hideForRange ? 'none' : 'block';
+        
+        ['bereit','dispo','urlaub','krank','ruhe'].forEach(b => {
             let bStatus = b.charAt(0).toUpperCase() + b.slice(1);
             document.getElementById('btn-'+b).classList.toggle('active', activeStatus === bStatus);
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
+        
+        if(isRangeStatus) {
+            document.getElementById('d_start').value = document.getElementById('d').value;
+            document.getElementById('d_end').value = document.getElementById('d').value;
+        }
+    }
+
+    function setDispoTimes(start, end) {
+        document.getElementById('s').value = start;
+        document.getElementById('e').value = end;
     }
 
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
-        if(['dienst','krank','bereit'].includes(statusCheck)) {
+        if(['dienst','krank','bereit','dispo'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
             if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
                 r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
@@ -436,41 +480,51 @@
                 }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-            r.bonus=(statusCheck!=='krank' && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
+            r.bonus=(['dienst','dispo','bereit'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
             let abw = 0;
-            if (r.tr && statusCheck !== 'krank') { 
+            if (r.tr && !['krank','urlaub','ruhe'].includes(statusCheck)) { 
                 let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
                 let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
                 let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
                 if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
                 abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
             }
-            r.spesen = statusCheck==='krank'?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
-            r.fae = (r.tr && statusCheck !== 'krank') ? config.fahrt : 0; r.faeCount = (r.tr && statusCheck !== 'krank') ? 1 : 0;
+            r.spesen = (statusCheck==='krank' || statusCheck==='urlaub' || statusCheck==='ruhe')?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
+            r.fae = (r.tr && !['krank','urlaub','ruhe'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','urlaub','ruhe'].includes(statusCheck)) ? 1 : 0;
         } else if(statusCheck==='urlaub') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
-        else if(statusCheck==='ruhe') { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         return r;
     }
 
     function add() {
-        const d=document.getElementById('d').value; if(!d) return;
-        const id=document.getElementById('edit-id').value;
-        let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-        r=calculateShift(r); 
-        if(id) {
-            const idx = data.findIndex(x => x.id === parseInt(id));
-            if(idx !== -1) { r.edited = true; data[idx] = r; }
-        } else { data.push(r); }
-        localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
-        setTimeout(() => {
-            const target = document.getElementById('row-' + r.id);
-            if(target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.classList.add('highlight-edit');
-                setTimeout(() => target.classList.remove('highlight-edit'), 3000);
+        const isRange = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
+        
+        if (isRange) {
+            let start = new Date(document.getElementById('d_start').value);
+            let end = new Date(document.getElementById('d_end').value);
+            if (isNaN(start) || isNaN(end)) return;
+            
+            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+                let dStr = dt.toISOString().split('T')[0];
+                let r = { 
+                    d: dStr, status: activeStatus, id: Date.now() + Math.random(),
+                    s: '', e: '', p1s: '', pd1: 0, p2s: '', pd2: 0, ev: '', eb: '', loc: 'BHF', tr: false, korrHin: '', korrRueck: '' 
+                };
+                r = calculateShift(r);
+                data.push(r);
             }
-        }, 100);
+        } else {
+            const d = document.getElementById('d').value; if(!d) return;
+            const id = document.getElementById('edit-id').value;
+            let r = { d, status: activeStatus, id: id ? parseInt(id) : Date.now(), s: document.getElementById('s').value, e: document.getElementById('e').value, p1s: document.getElementById('p1s').value, pd1: parseInt(document.getElementById('pd1').value), p2s: document.getElementById('p2s').value, pd2: parseInt(document.getElementById('pd2').value), ev: document.getElementById('ev').value, eb: document.getElementById('eb').value, loc: document.getElementById('loc').value, tr: document.getElementById('tr').checked, korrHin: document.getElementById('korrHin').value, korrRueck: document.getElementById('korrRueck').value };
+            r = calculateShift(r); 
+            if(id) {
+                const idx = data.findIndex(x => x.id === parseInt(id));
+                if(idx !== -1) { r.edited = true; data[idx] = r; }
+            } else { data.push(r); }
+        }
+        
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
     }
 
     function del(id) { 
@@ -500,7 +554,7 @@
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
-                if(st === 'dienst' || st === 'bereit') yS.arbeit++;
+                if(['dienst','bereit','dispo'].includes(st)) yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
@@ -531,7 +585,7 @@
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const roundedM_NH = Math.round(mG.nH), nE = roundedM_NH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, bruttoZulagen = nE + szE + soE + ftE + mG.bE, nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
-                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}"> <div class="month-details-bar"> <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div> <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div> <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div> <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div> <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div> <div></div> <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div> <div></div> <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div> </div> <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div> <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => { const wd = wDaysShort[new Date(item.d).getDay()], isFuture = item.d > todayStr, locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '', displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1), rowOpacity = isFuture ? 'opacity: 0.6;' : '', editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎</small>' : ''; return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`; }).join('')}</table></div></div>`; });
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}"> <div class="month-details-bar"> <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div> <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div> <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div> <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div> <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div> <div></div> <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div> <div></div> <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div> </div> <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div> <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => { const wd = wDaysShort[new Date(item.d).getDay()], isFuture = item.d > todayStr, locText = (['dienst','bereit','dispo'].includes(item.status.toLowerCase())) ? ` (${item.loc})` : '', displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1), rowOpacity = isFuture ? 'opacity: 0.6;' : '', editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎</small>' : ''; return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`; }).join('')}</table></div></div>`; });
             yearHtml += `</div></div>`;
             cont.innerHTML += yearHtml;
         });
