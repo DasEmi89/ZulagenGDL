@@ -238,13 +238,18 @@
 
     // --- IMPORT / EXPORT LOGIK ---
 
+    // DIESE FUNKTION FEHLTE IM SCRIPT-TEIL
+    function toggleImport() {
+        const p = document.getElementById('import-panel');
+        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+    }
+
     function exportSemicolonList() {
         if(data.length === 0) return alert("Keine Daten zum Exportieren vorhanden.");
         let output = "";
         const sortedData = [...data].sort((a,b) => a.d.localeCompare(b.d));
         
         sortedData.forEach(r => {
-            // Hilfsvariablen für Pausenende berechnen aus Start + Minuten
             const p1e = r.p1s && r.pd1 ? addMinutes(r.p1s, r.pd1) : "";
             const p2e = r.p2s && r.pd2 ? addMinutes(r.p2s, r.pd2) : "";
             
@@ -282,11 +287,7 @@
             if(cols.length >= 2) {
                 const d = cols[0].trim();
                 const status = cols[1].trim().charAt(0).toUpperCase() + cols[1].trim().slice(1).toLowerCase();
-                
-                // Nur importieren wenn Datum gültig aussieht
                 if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-
-                // Existierende Schicht am selben Tag ID finden oder neu
                 const existingIdx = data.findIndex(x => x.d === d);
                 
                 let r = {
@@ -303,23 +304,15 @@
                     pd2: 0,
                     ev: "", eb: "", korrHin: "", korrRueck: ""
                 };
-
-                // Berechne Minuten aus Endzeit falls vorhanden
                 if(cols[6] && cols[7]) r.pd1 = diffMinutes(cols[6], cols[7]);
                 if(cols[8] && cols[9]) r.pd2 = diffMinutes(cols[8], cols[9]);
-                
-                // Brd Automatik
                 if(status === "Bereit" && r.s) { r.ev = r.s; r.eb = r.e; }
-
                 r = calculateShift(r);
-                
                 if(existingIdx !== -1) data[existingIdx] = r;
                 else data.push(r);
-                
                 importedCount++;
             }
         });
-
         localStorage.setItem('shifts_p10', JSON.stringify(data));
         render();
         toggleImport();
@@ -345,8 +338,6 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-
-    // --- RECHNER LOGIK ---
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
