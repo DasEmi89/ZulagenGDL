@@ -268,11 +268,14 @@
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                const newItems = p.data.filter(newItem => !data.some(existingItem => String(existingItem.id) === String(newItem.id)))
-                    .map(item => {
-                        if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
-                        return calculateShift(item);
-                    });
+                const newItems = p.data.map((newItem, index) => {
+                        // SICHERHEIT: Falls ID fehlt, wird eine neue generiert
+                        if (!newItem.id) {
+                            newItem.id = Date.now() + Math.floor(Math.random() * 1000) + index;
+                        }
+                        return calculateShift(newItem);
+                    }).filter(newItem => !data.some(existingItem => String(existingItem.id) === String(newItem.id)));
+                
                 data = [...data, ...newItems];
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
@@ -415,7 +418,7 @@
         });
 
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
-        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
+        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total.toFixed(2));
         
         const nSollH = (config.gutschrift * 60) / 5;
         let roundedTotalN = 0;
