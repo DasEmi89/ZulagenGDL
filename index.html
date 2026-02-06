@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
-    <title>Lok-Zulagen Rechner V84-RECOVERY</title>
+    <title>Lok-Zulagen Rechner V84</title>
     <style>
         :root { --p: #2563eb; --bg: #f8fafc; --text: #1e293b; --warn: #f59e0b; --danger: #ef4444; --success: #16a34a; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 15px 30px; }
@@ -23,10 +23,12 @@
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; }
         .btn-sub.active { background: var(--success) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
         .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
+        
         .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
+        
         .month-details-bar { background: #1a222f; color: #cbd5e0; padding: 12px 15px; font-size: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; border-bottom: 2px solid #2d3748; }
         .detail-row { display: flex; justify-content: space-between; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid transparent; }
         .row-nazu { border-left-color: #38bdf8; }
@@ -40,6 +42,7 @@
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
         .spesen-bar { background: #111827; color: #4ade80; padding: 10px 15px; font-size: 0.9rem; border-bottom: 1px solid #4a5568; font-weight: bold; }
+        
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; }
@@ -58,16 +61,18 @@
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
+        
+        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
+        
         .highlight-edit { animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
-        .sync-indicator { font-size: 0.65rem; margin-top: 4px; opacity: 0.8; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="toast" class="toast">Kopiert!</div>
+<div id="toast" class="toast">In Zwischenablage kopiert!</div>
 
 <div class="total-summary">
     <div class="top-icons">
@@ -76,7 +81,6 @@
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
-    <div id="sync-info" class="sync-indicator">GitHub Kalender: Bereit</div>
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
         <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
@@ -87,20 +91,23 @@
         <div id="extra-vac-summary" style="color: #93c5fd;">Zusatzurlaub: 0 Tage (0.00/96.00h)</div>
     </div>
     <div class="progress-bar"><div id="p_fill" class="progress-fill"></div></div>
-    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne...</div>
+    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne 2026...</div>
 </div>
 
 <div id="info-panel">
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin:0">Regeln</h2>
+        <h2 style="margin:0">Berechnungs-Regeln</h2>
         <span onclick="toggleInfo()" style="font-size: 1.5rem; cursor: pointer;">×</span>
     </div>
     <div id="info-content">
-        <div class="info-item"><span>Nacht:</span><b>20:00 - 06:00</b></div>
-        <div class="info-item"><span>Samstag:</span><b>13:00 - 20:00</b></div>
-        <div class="info-item"><span>Spesen:</span><b id="inf-spesen"></b></div>
-        <div class="info-item"><span>FAE:</span><b id="inf-fae"></b></div>
-        <div class="info-item"><span>Gutschrift:</span><b id="inf-gut"></b></div>
+        <div class="info-item"><span>Nacht-Zeitraum:</span><b>20:00 - 06:00</b></div>
+        <div class="info-item"><span>Samstag-Zulage:</span><b>13:00 - 20:00</b></div>
+        <div class="info-item"><span>Priorität:</span><b>Feiertag > Sa/So</b></div>
+        <div class="info-item"><span>Nacht-Rundung:</span><b>Kaufmännisch (pro Monat)</b></div>
+        <div class="info-item"><span>Spesen 8h/14h/24h:</span><b id="inf-spesen"></b></div>
+        <div class="info-item"><span>FAE Satz:</span><b id="inf-fae"></b></div>
+        <div class="info-item"><span>Urlaub Gutschrift:</span><b id="inf-gut"></b></div>
+        <div class="info-item"><span>Zusatzurlaub:</span><b>Pro <span id="inf-nac"></span> Nachtstunden</b></div>
     </div>
     <button onclick="toggleInfo()" style="margin-top: 20px;">Schließen</button>
 </div>
@@ -112,38 +119,36 @@
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
     <div class="grid"><div><label>FAE €/Tag</label><input type="number" id="cfg-fahrt" step="0.01"></div><div><label>Urlaub h/Tag</label><input type="number" id="cfg-gutschrift" step="0.01"></div></div>
     <hr>
-    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--p);">GitHub Kalender Abo</label>
-        <div style="margin-bottom: 10px;">
-            <label>GitHub Repo (Name/Repo)</label>
-            <input type="text" id="cfg-clientId" placeholder="Nutzer/Repo">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label>GitHub Token</label>
-            <textarea id="cfg-apiKey" style="height: 60px; font-family: monospace; font-size: 0.8rem;" placeholder="github_pat_..."></textarea>
-        </div>
-        <button onclick="syncToGitHub()" style="background:#16a34a;">JETZT SYNC STARTEN</button>
-    </div>
+    <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
+    <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
+    <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-        <button onclick="exportJSONFile()" style="background:#2563eb;">💾 ALS .JSON SPEICHERN</button>
-        <button onclick="toggleImport()" style="background:#475569; margin-top:8px;">📤 IMPORT / RECOVERY</button>
+        <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
+        <button onclick="exportData()" style="background:#475569; margin-top:0; font-size:0.9rem;">📥 BACKUP KOPIEREN</button>
+        <button onclick="exportJSONFile()" style="background:#2563eb; margin-top:8px; font-size:0.9rem;">💾 ALS .JSON SPEICHERN</button>
+        <button onclick="toggleImport()" style="background:#475569; margin-top:8px; font-size:0.9rem;">📤 IMPORT / DIENSTPLAN</button>
     </div>
-    <button onclick="saveConfig()" style="background:var(--success)">SPEICHERN</button>
+    <button onclick="saveConfig()" style="background:var(--success)">SPEICHERN & SCHLIEẞEN</button>
     <button onclick="toggleConfig()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
 
 <div id="import-panel">
-    <h2 style="margin-top:0">Wiederherstellung</h2>
-    <textarea id="import-area" style="width:100%; height:250px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='Inhalt der .json Datei hier einfügen'></textarea>
-    <button onclick="processImport()" style="background:var(--success)">DATEN EINLESEN</button>
+    <h2 style="margin-top:0">Dienstplan hinzufügen</h2>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px;">Datei auswählen (.json)</label>
+        <input type="file" id="import-file" accept=".json" onchange="processFileImport(this)">
+    </div>
+    <p style="font-size: 0.8rem; color: #64748b;">Oder Dienstplan-Text hier einfügen (JSON):</p>
+    <textarea id="import-area" style="width:100%; height:250px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
+    <button onclick="processImport()" style="background:var(--success)">SCHICHTEN HINZUFÜGEN</button>
     <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
 
 <div id="refresh-dialog" onclick="if(event.target===this) closeRefreshDialog()">
     <div class="dialog-content">
-        <h3>Tarif-Update</h3>
-        <p>Ab welchem Datum neu berechnen?</p>
+        <h3 style="margin-top:0">Tarif-Update</h3>
+        <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum sollen Schichten neu berechnet werden?</p>
         <input type="date" id="refresh-date" style="margin-bottom:15px;">
         <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
         <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
@@ -154,57 +159,33 @@
     <div id="btn-cancel-edit" class="btn-close-edit" onclick="cancelEdit()">×</div>
     <div id="edit-id-view" style="display:none; color:var(--warn); font-weight:bold; margin-bottom:10px; text-align:center;">✎ BEARBEITEN AKTIV</div>
     <input type="hidden" id="edit-id">
+    <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
+    <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
     
-    <div id="date-range-fields" style="display:none; background:#f1f5f9; padding:12px; border-radius:12px; margin-bottom:12px; border:1px solid #e2e8f0;">
-        <label style="color:var(--p); margin-bottom:8px; display:block;">Zeitraum festlegen</label>
-        <div class="grid">
-            <div><label>Start</label><input type="date" id="d_start"></div>
-            <div><label>Ende</label><input type="date" id="d_end"></div>
-        </div>
-    </div>
-
-    <div id="standard-date-field">
-        <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
-    </div>
-
-    <div id="time-fields">
-        <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
-    </div>
-
-    <div id="dispo-quick-select" style="display:none; margin-bottom:12px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
-        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('04:00','12:00')">Früh (4-12)</button>
-        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('12:00','20:00')">Tag (12-20)</button>
-        <button class="btn-sub" style="margin-top:0; padding:8px; font-size:0.7rem;" onclick="setDispoTimes('20:00','04:00')">Nacht (20-4)</button>
-    </div>
-
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
-        <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts</label>
+        <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
     </div>
 
-    <div id="work-details" class="pause-box">
-        <label>Pause 1</label>
+    <div class="pause-box">
+        <label>Pause 1 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p1s"><select id="pd1"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">60 Min</option></select></div>
-        <label>Pause 2</label>
+        <label>Pause 2 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p2s"><select id="pd2"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option></select></div>
     </div>
-
-    <div id="loc-details" class="grid">
+    <div class="grid">
         <div><label>Ort</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
             <div><label>Korr. Hin</label><input type="number" id="korrHin" placeholder="Min"></div>
             <div><label>Korr. Rück</label><input type="number" id="korrRueck" placeholder="Min"></div>
         </div>
     </div>
-
-    <div id="fae-details" class="grid" style="align-items: center; justify-content: end;">
+    <div class="grid" style="align-items: center; justify-content: end;">
         <label style="display:flex; align-items:center; gap:8px; cursor: pointer;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
     </div>
-
     <button id="main-btn" onclick="add()">Schicht speichern</button>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
         <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereitschaft</button>
-        <button id="btn-dispo" class="btn-sub" onclick="toggleStatus('dispo')">Dispo</button>
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
@@ -214,63 +195,11 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    V84-RECOVERY-STABLE<br>
-    Stand: 06.02.2026, 15:10 Uhr
+    Aktuelle Versionsnummer 1.1<br>
+    Stand: 03.02.2026, 08:31 Uhr
 </div>
 
 <script>
-    // --- GITHUB SYNC FUNKTION ---
-    async function syncToGitHub() {
-        const ghToken = (document.getElementById('cfg-apiKey').value || config.apiKey).trim();
-        const ghRepo = (document.getElementById('cfg-clientId').value || config.clientId).trim();
-        if (!ghToken || !ghRepo || !ghRepo.includes("/")) return alert("GitHub Daten unvollständig!");
-
-        const statusIndicator = document.getElementById('sync-info');
-        statusIndicator.innerText = "Sync: Generiere iCal...";
-
-        let ics = [
-            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lok-Zulagen//V84", "X-WR-CALNAME:Dienstplan", "X-WR-TIMEZONE:Europe/Berlin",
-            "BEGIN:VTIMEZONE", "TZID:Europe/Berlin",
-            "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3", "END:DAYLIGHT",
-            "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10", "END:STANDARD",
-            "END:VTIMEZONE"
-        ];
-
-        data.forEach(r => {
-            const stLow = r.status.toLowerCase();
-            const cleanD = r.d.replace(/-/g, "");
-            let s = "", e = "", summary = r.status;
-
-            if (['dienst', 'bereit', 'dispo'].includes(stLow) && r.s && r.e) {
-                summary = `${stLow.toUpperCase()} ${r.s}-${r.e}`;
-                s = `${cleanD}T${r.s.replace(":", "")}00`;
-                let endObj = new Date(r.d + "T" + r.e + ":00");
-                if (timeToDec(r.e) <= timeToDec(r.s)) endObj.setDate(endObj.getDate() + 1);
-                e = `${endObj.getFullYear()}${String(endObj.getMonth()+1).padStart(2,'0')}${String(endObj.getDate()).padStart(2,'0')}T${r.e.replace(":", "")}00`;
-            } else {
-                s = cleanD; let n = new Date(r.d); n.setDate(n.getDate()+1);
-                e = n.toISOString().split('T')[0].replace(/-/g, "");
-            }
-            if (s && e) ics.push("BEGIN:VEVENT", `UID:${r.id}@lok.de`, `SUMMARY:${summary}`, `DTSTART;TZID=Europe/Berlin:${s}`, `DTEND;TZID=Europe/Berlin:${e}`, "END:VEVENT");
-        });
-        ics.push("END:VCALENDAR");
-
-        statusIndicator.innerText = "Sync: Upload...";
-        try {
-            const url = `https://api.github.com/repos/${ghRepo}/contents/dienstplan.ics`;
-            let sha = "";
-            const getR = await fetch(url, { headers: { "Authorization": `token ${ghToken}` } });
-            if (getR.ok) { const j = await getR.json(); sha = j.sha; }
-            const putR = await fetch(url, {
-                method: "PUT",
-                headers: { "Authorization": `token ${ghToken}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "Update", content: btoa(unescape(encodeURIComponent(ics.join("\r\n")))), sha: sha })
-            });
-            if (putR.ok) { statusIndicator.innerText = "GitHub Sync: OK"; statusIndicator.style.color = "var(--success)"; showToast("Sync erfolgreich!"); }
-        } catch (err) { statusIndicator.innerText = "GitHub Fehler!"; }
-    }
-
-    // --- RECOVERY & BASIS LOGIK ---
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
         const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), n = Math.floor((h + l - 7 * m + 114) / 31), p = (h + l - 7 * m + 114) % 31;
@@ -283,7 +212,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, apiKey: '', clientId: 'DasEmi89/ZulagenGDL'};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -292,42 +221,78 @@
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
     function toggleInfo() {
-        const p = document.getElementById('info-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') {
+        const p = document.getElementById('info-panel');
+        const isOpen = p.style.display === 'block';
+        p.style.display = isOpen ? 'none' : 'block';
+        if(!isOpen) {
             document.getElementById('inf-spesen').innerText = `${config.v1.toFixed(2)} / ${config.v2.toFixed(2)} / ${config.v3.toFixed(2)} €`;
             document.getElementById('inf-fae').innerText = `${config.fahrt.toFixed(2)} €`;
             document.getElementById('inf-gut').innerText = `${config.gutschrift.toFixed(1)} h`;
+            document.getElementById('inf-nac').innerText = ((config.gutschrift * 60) / 5).toFixed(0);
         }
     }
 
-    function toggleImport() { document.getElementById('import-panel').style.display = (document.getElementById('import-panel').style.display === 'block') ? 'none' : 'block'; }
-
-    function processImport() {
-        const raw = document.getElementById('import-area').value.trim();
-        if(!raw) return;
-        try {
-            const p = JSON.parse(raw);
-            let rawItems = p.data || (Array.isArray(p) ? p : null);
-            if(rawItems) {
-                const newItems = rawItems.map((item, index) => {
-                    if (item.ps1) item.p1s = item.ps1; if (item.ps2) item.p2s = item.ps2;
-                    if (!item.id || isNaN(item.id)) item.id = Date.now() + Math.floor(Math.random() * 1000) + index;
-                    return calculateShift(item);
-                }).filter(ni => !data.some(ei => String(ei.id) === String(ni.id)));
-                
-                data = [...data, ...newItems];
-                localStorage.setItem('shifts_p10', JSON.stringify(data));
-                render(); toggleImport(); document.getElementById('import-area').value = '';
-                alert(newItems.length + " Schichten erfolgreich importiert!");
-            }
-        } catch(e) { alert("Fehler: JSON-Format ungültig."); }
+    async function exportData() {
+        const str = JSON.stringify({ data, config, date: new Date().toLocaleString() });
+        try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
     }
 
     function exportJSONFile() {
         const str = JSON.stringify({ data, config, date: new Date().toISOString() }, null, 2);
         const blob = new Blob([str], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `Backup_Lok.json`; a.click();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Schichten_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function toggleImport() {
+        const p = document.getElementById('import-panel');
+        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function processFileImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            applyImportData(e.target.result);
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function processImport() {
+        const raw = document.getElementById('import-area').value.trim();
+        if(!raw) return;
+        applyImportData(raw);
+    }
+
+    function applyImportData(jsonStr) {
+        try {
+            const p = JSON.parse(jsonStr);
+            if(p.data && Array.isArray(p.data)) {
+                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id))
+                    .map(item => {
+                        if (!item.id) item.id = Date.now() + Math.floor(Math.random() * 1000);
+                        return item;
+                    });
+                data = [...data, ...newItems];
+                localStorage.setItem('shifts_p10', JSON.stringify(data));
+                render();
+                toggleImport();
+                document.getElementById('import-area').value = '';
+                alert(newItems.length + " neue Schichten erfolgreich hinzugefügt!");
+            } else {
+                alert("Format ungültig.");
+            }
+        } catch(e) {
+            alert("Fehler beim Verarbeiten.");
+        }
     }
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
@@ -340,12 +305,10 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','apiKey','clientId'].forEach(k => { 
-            config[k] = (k === 'apiKey' || k === 'clientId') ? document.getElementById('cfg-'+k).value : (parseFloat(document.getElementById('cfg-'+k).value) || 0); 
-        });
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
     function autoDetectDay() {
@@ -358,23 +321,20 @@
     function toggleStatus(st) { 
         let displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        const isRangeStatus = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
-        document.getElementById('date-range-fields').style.display = isRangeStatus ? 'block' : 'none';
-        document.getElementById('standard-date-field').style.display = isRangeStatus ? 'none' : 'block';
-        document.getElementById('dispo-quick-select').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
-        ['time-fields','work-details','loc-details','fae-details'].forEach(id => document.getElementById(id).style.display = isRangeStatus ? 'none' : 'block');
-        ['bereit','dispo','urlaub','krank','ruhe'].forEach(b => document.getElementById('btn-'+b).classList.toggle('active', activeStatus === (b.charAt(0).toUpperCase()+b.slice(1)))); 
+        ['bereit','ruhe','urlaub','krank'].forEach(b => {
+            let bStatus = b.charAt(0).toUpperCase() + b.slice(1);
+            document.getElementById('btn-'+b).classList.toggle('active', activeStatus === bStatus);
+        }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
-        if(isRangeStatus) document.getElementById('d_start').value = document.getElementById('d_end').value = document.getElementById('d').value;
     }
 
-    function setDispoTimes(start, end) { document.getElementById('s').value = start; document.getElementById('e').value = end; }
-
     function calculateShift(r) {
-        let st = r.status.toLowerCase();
-        if(['dienst','krank','bereit','dispo'].includes(st)) {
+        let statusCheck = r.status.toLowerCase();
+        if(['dienst','krank','bereit'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
-            if(st === 'krank' && (t1 === null || t2 === null)) { r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r; }
+            if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
+                r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
+            }
             if(t1===null || t2===null) return r;
             if(t2<=t1) t2+=24;
             let n=0, sz=0, so=0, ft=0, w=0;
@@ -383,86 +343,216 @@
                 if(!p.some(pa => i>=pa.s && i<pa.e)) {
                     w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                     let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
-                    if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
+                    if(c>=20 || c<6) n+=(1/60); 
+                    if(isF) ft+=(1/60); 
+                    else if(isO) so+=(1/60); 
+                    else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-            r.bonus=(['dienst','dispo','bereit'].includes(st) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
-            let abw = (r.tr && !['krank','urlaub','ruhe'].includes(st)) ? ((st==='bereit'?(timeToDec(r.eb)-timeToDec(r.ev)+(timeToDec(r.eb)<=timeToDec(r.ev)?24:0)):(t2-t1)) + (r.loc==='BRGB'?(config.wegeHin+config.wegeRueck)/60:-7/60)) : 0;
-            r.spesen = abw>=8?(abw>=24?config.v3:(abw>=14?config.v2:config.v1)):0;
-            r.fae = (r.tr && !['krank','urlaub','ruhe'].includes(st)) ? config.fahrt : 0; r.faeCount = r.fae?1:0;
-        } else if(st==='urlaub') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
+            r.bonus=(statusCheck!=='krank' && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
+            let abw = 0;
+            if (r.tr && statusCheck !== 'krank') { 
+                let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
+                let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
+                let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
+                if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
+                abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
+            }
+            r.spesen = statusCheck==='krank'?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
+            r.fae = (r.tr && statusCheck !== 'krank') ? config.fahrt : 0; r.faeCount = (r.tr && statusCheck !== 'krank') ? 1 : 0;
+        } else if(statusCheck==='urlaub') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         return r;
     }
 
     function add() {
-        const isRange = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
-        if (isRange) {
-            let start = new Date(document.getElementById('d_start').value), end = new Date(document.getElementById('d_end').value);
-            if (isNaN(start) || isNaN(end)) return;
-            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-                let r = calculateShift({ d: dt.toISOString().split('T')[0], status: activeStatus, id: Date.now() + Math.random(), s: '', e: '', p1s: '', pd1: 0, p2s: '', pd2: 0, ev: '', eb: '', loc: 'BHF', tr: false, korrHin: '', korrRueck: '' });
-                data.push(r);
+        const d=document.getElementById('d').value; if(!d) return;
+        const id=document.getElementById('edit-id').value;
+        let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+        r=calculateShift(r); 
+        
+        if(id) {
+            const idx = data.findIndex(x => x.id === parseInt(id));
+            if(idx !== -1) {
+                r.edited = true; // Flag setzen
+                data[idx] = r;
             }
         } else {
-            const d = document.getElementById('d').value, id = document.getElementById('edit-id').value; if(!d) return;
-            let r = calculateShift({ d, status: activeStatus, id: id ? parseInt(id) : Date.now(), s: document.getElementById('s').value, e: document.getElementById('e').value, p1s: document.getElementById('p1s').value, pd1: parseInt(document.getElementById('pd1').value), p2s: document.getElementById('p2s').value, pd2: parseInt(document.getElementById('pd2').value), ev: document.getElementById('ev').value, eb: document.getElementById('eb').value, loc: document.getElementById('loc').value, tr: document.getElementById('tr').checked, korrHin: document.getElementById('korrHin').value, korrRueck: document.getElementById('korrRueck').value });
-            if(id) { const idx = data.findIndex(x => x.id === parseInt(id)); if(idx !== -1) { r.edited = true; data[idx] = r; } } else data.push(r);
+            data.push(r);
         }
+        
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
+        
+        // Nach dem Speichern zur Schicht springen
+        setTimeout(() => {
+            const target = document.getElementById('row-' + r.id);
+            if(target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight-edit');
+                setTimeout(() => target.classList.remove('highlight-edit'), 3000);
+            }
+        }, 100);
     }
 
-    function del(id) { if(confirm('Löschen?')) { data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
+    function del(id) { 
+        if(confirm('Möchtest du diese Schicht wirklich unwiderruflich löschen?')) { 
+            data=data.filter(r=>r.id!==id); 
+            localStorage.setItem('shifts_p10', JSON.stringify(data)); 
+            render(); 
+        } 
+    }
 
     function render() {
         const cont = document.getElementById('history'); cont.innerHTML = '';
-        const todayStr = new Date().toISOString().split('T')[0], currentYear = new Date().getFullYear().toString();
-        let tH=0, tV=0, tN=0; const tree = {};
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear().toString();
+        let tH_total=0, tV_total=0, tN_total=0; 
+        
+        const tree = {};
         data.forEach(r => {
-            const y = r.d.substring(0,4), m = r.d.substring(0,7);
-            if(!tree[y]) tree[y] = { months: {}, stats: { arbeit: 0 } };
+            const y = r.d.substring(0,4);
+            const m = r.d.substring(0,7);
+            const isFuture = r.d > todayStr;
+            
+            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
-            tree[y].months[m].items.push(r);
-            if(r.d <= todayStr) {
-                if(['dienst','bereit','dispo'].includes(r.status.toLowerCase())) tree[y].stats.arbeit++;
-                if(r.status.toLowerCase()==='urlaub' && new Date(r.d).getDay()%6!==0) if(y===currentYear) tV++;
-                const mG = tree[y].months[m]; mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=r.faeCount; if(r.loc==='BRGB') mG.br++;
-                if(y === currentYear) { tH += r.h; tN += r.nH; }
+            
+            const yS = tree[y].stats;
+            const mG = tree[y].months[m];
+            
+            mG.items.push(r);
+            
+            let st = r.status.toLowerCase();
+            if(!isFuture) {
+                if(st === 'krank') yS.krank++;
+                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
+                if(st === 'dienst' || st === 'bereit') yS.arbeit++;
+                if(r.loc === 'BRGB') yS.brgb++;
+                
+                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
+                
+                if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
-        document.getElementById('h_sum').innerText=tH.toFixed(2); document.getElementById('d_sum').innerText=(tH-((config.jsoll/365)*Math.max(1,Math.ceil((new Date()-new Date(currentYear,0,1))/864e5)))).toFixed(2);
-        document.getElementById('s_offen').innerText=(config.jsoll-tH).toFixed(2);
-        const roundedN = Object.keys(tree).filter(y=>y===currentYear).reduce((acc,y)=>acc+Object.keys(tree[y].months).reduce((ma,m)=>ma+Math.round(tree[y].months[m].nH),0),0);
-        document.getElementById('vac-summary').innerText=`Urlaub: ${tV}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatz: ${Math.floor(roundedN/((config.gutschrift*60)/5))} Tage (${roundedN}h)`;
-        document.getElementById('p_fill').style.width=Math.min(100,(tH/config.jsoll*100))+"%";
+
+        let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
+        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
+        const nSollH = (config.gutschrift * 60) / 5;
+        
+        let roundedTotalN = 0;
+        Object.keys(tree).forEach(y => {
+            if(y === currentYear) {
+                Object.keys(tree[y].months).forEach(m => {
+                   let rawM = tree[y].months[m].nH;
+                   roundedTotalN += Math.round(rawM);
+                });
+            }
+        });
+
+        document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        
+        document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
+        document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
+
         Object.keys(tree).sort().reverse().forEach(y => {
+            const yData = tree[y];
             const yOpen = openYears.has(y);
-            let yH = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${tree[y].stats.arbeit}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
-            Object.keys(tree[y].months).sort().reverse().forEach(m => {
-                const mG = tree[y].months[m], mOpen = openMonths.has(m), rN = Math.round(mG.nH);
-                const nV = (rN*config.nacht+mG.soH*config.sonntag+mG.ftH*config.feiertag+mG.sp+mG.fE)+((mG.szH*config.samstag+mG.bE)*0.65);
-                yH += `<div style="margin:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(m.split('-')[1])-1]} (${mG.h.toFixed(1)}h)</span></div><div class="month-content ${mOpen?'open':''}">
-                <div class="month-details-bar"><div class="detail-row row-nazu"><span>NaZu:</span><span>${rN}h | ${(rN*config.nacht).toFixed(2)}€</span></div><div class="detail-row row-fae"><span>FAE:</span><span>${mG.fC}x | ${mG.fE.toFixed(2)}€</span></div></div>
-                <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
-                <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => `<tr id="row-${item.id}"><td><b>${wDaysShort[new Date(item.d).getDay()]}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${item.status}</small></td><td>${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`).join('')}</table></div></div>`;
+            
+            let yearHtml = `<div class="year-group">
+                <div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')">
+                    <span>JAHR ${y}</span>
+                    <div class="m-stats">
+                        <span>Arbeit: ${yData.stats.arbeit}</span>
+                        <span>Krank: ${yData.stats.krank}</span>
+                        <span>Urlaub: ${yData.stats.urlaub}</span>
+                        <span>BRGB: ${yData.stats.brgb}</span>
+                    </div>
+                </div>
+                <div class="month-content ${yOpen?'open':''}">`;
+
+            Object.keys(yData.months).sort().reverse().forEach(m => {
+                const mG = yData.months[m];
+                const mOpen = openMonths.has(m);
+                const [yr, mo] = m.split('-');
+                
+                const roundedM_NH = Math.round(mG.nH);
+                const nE = roundedM_NH * config.nacht;
+                
+                const szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
+                const bruttoZulagen = nE + szE + soE + ftE + mG.bE;
+                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
+
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
+                        <span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span>
+                        <div class="m-stats" ${mOpen?'style="display:none"':''}>
+                            <span>BRGB: ${mG.br}x</span>
+                            <span>Zul: ${bruttoZulagen.toFixed(2)}€</span>
+                        </div>
+                    </div>
+                    <div class="month-content ${mOpen?'open':''}">
+                        <div class="month-details-bar">
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
+                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
+                            <div></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                        </div>
+                        <div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
+                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(item => {
+                            const wd = wDaysShort[new Date(item.d).getDay()];
+                            const isFuture = item.d > todayStr;
+                            const locText = (item.status.toLowerCase() === 'dienst' || item.status.toLowerCase() === 'bereit') ? ` (${item.loc})` : '';
+                            const displayStatusFormatted = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+                            const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
+                            const editedLabel = item.edited ? ' <small style="color:var(--warn); font-style:italic;">✎ (bearbeitet)</small>' : '';
+                            return `<tr id="row-${item.id}"><td style="${rowOpacity}"><b>${wd}, ${item.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editedLabel}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${item.s||'--'}-${item.e||'--'}<br><small>${item.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${item.id})">✎</button><button class="btn-mini btn-del" onclick="del(${item.id})">🗑</button></td></tr>`;
+                        }).join('')}</table>
+                    </div>
+                </div>`;
             });
-            cont.innerHTML += yH + `</div></div>`;
+
+            yearHtml += `</div></div>`;
+            cont.innerHTML += yearHtml;
         });
     }
 
     function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
+    
     function edit(id) { 
-        const r = data.find(x => String(x.id) === String(id)); if(!r) return;
-        document.getElementById('edit-id').value = r.id; document.getElementById('d').value = r.d; 
-        ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
-        ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
-        document.getElementById('loc').value = r.loc || 'BHF'; document.getElementById('tr').checked = !!r.tr; 
-        document.getElementById('edit-id-view').style.display = 'block'; document.getElementById('btn-cancel-edit').style.display = 'flex'; 
-        toggleStatus(r.status.toLowerCase()); autoDetectDay(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
+        if(!r) return;
+        
+        document.getElementById('edit-id').value=r.id; 
+        document.getElementById('d').value=r.d; 
+        document.getElementById('s').value=r.s||''; 
+        document.getElementById('e').value=r.e||''; 
+        document.getElementById('ev').value=r.ev||''; 
+        document.getElementById('eb').value=r.eb||''; 
+        document.getElementById('p1s').value=r.p1s||''; 
+        document.getElementById('pd1').value=r.pd1||0; 
+        document.getElementById('p2s').value=r.p2s||''; 
+        document.getElementById('pd2').value=r.pd2||0; 
+        document.getElementById('loc').value=r.loc||'BHF'; 
+        document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
+        document.getElementById('korrHin').value=r.korrHin||''; 
+        document.getElementById('korrRueck').value=r.korrRueck||''; 
+        
+        document.getElementById('edit-id-view').style.display='block'; 
+        document.getElementById('btn-cancel-edit').style.display='flex'; 
+        
+        toggleStatus(r.status.toLowerCase()); 
+        autoDetectDay();
+        document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
         ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
@@ -472,3 +562,4 @@
 </script>
 </body>
 </html>
+
