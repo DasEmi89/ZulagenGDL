@@ -8,33 +8,24 @@
     <style>
         :root { --p: #2563eb; --bg: #f8fafc; --text: #1e293b; --warn: #f59e0b; --danger: #ef4444; --success: #16a34a; }
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 15px 30px; }
-        
-        .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .spinner { width: 40px; height: 40px; border: 4px solid #fff; border-top: 4px solid var(--p); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         .total-summary { background: var(--p); color: white; margin: -15px -15px 20px -15px; padding: calc(40px + env(safe-area-inset-top)) 20px 25px; border-radius: 0 0 25px 25px; position: relative; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 15px; position: relative; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-left: 4px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box; background: #fff; }
-        
-        #config-panel, #refresh-dialog, #import-panel, #info-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 2000; padding: 30px 20px; overflow-y: auto; }
-        #refresh-dialog { background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 3000; }
+        #config-panel, #refresh-dialog, #info-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 2000; padding: 30px 20px; overflow-y: auto; }
         .dialog-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; color: var(--text); }
-        
+        .pause-box { background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+        .pause-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-bottom: 8px; align-items: end; }
         button { width: 100%; background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
         button:active { transform: scale(0.98); }
-        
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; }
         .btn-sub.active { background: var(--success) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
-        
         .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
         .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
-        
         .month-details-bar { background: #1a222f; color: #cbd5e0; padding: 12px 15px; font-size: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; border-bottom: 2px solid #2d3748; }
         .detail-row { display: flex; justify-content: space-between; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid transparent; }
         .row-nazu { border-left-color: #38bdf8; }
@@ -44,12 +35,10 @@
         .row-sozu { border-left-color: #4ade80; }
         .row-fezu { border-left-color: #f472b6; }
         .row-4uhr { border-left-color: #2dd4bf; }
-        
         .val-h { color: #38bdf8; font-weight: 500; }
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
         .spesen-bar { background: #111827; color: #4ade80; padding: 10px 15px; font-size: 0.9rem; border-bottom: 1px solid #4a5568; font-weight: bold; }
-        
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; }
@@ -65,17 +54,16 @@
         .icon-btn { cursor: pointer; background: rgba(255,255,255,0.2); width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 1.2rem; }
         .btn-close-edit { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #e2e8f0; color: #64748b; border-radius: 50%; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer; z-index: 10; }
         .header-info-row { font-size: 0.8rem; text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); line-height: 1.4; }
-        .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
+        .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
+        .highlight-edit { animation: pulse-bg 2s infinite; }
+        @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body>
 
-<div id="loading" class="loading-overlay"><div class="spinner"></div></div>
-
 <div class="total-summary">
     <div class="top-icons">
         <span class="icon-btn" onclick="toggleInfo()">ℹ️</span>
-        <span class="icon-btn" onclick="openRefreshDialog()">🔄</span>
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
@@ -86,10 +74,10 @@
     </div>
     <div class="header-info-row">
         <div id="vac-summary">Urlaub: 0 / 36</div>
-        <div id="extra-vac-summary" style="color: #93c5fd;">Zusatzurlaub: 0 Tage</div>
+        <div id="extra-vac-summary" style="color: #93c5fd;">Zusatzurlaub: 0 Tage (0.00/96.00h)</div>
     </div>
     <div class="progress-bar"><div id="p_fill" class="progress-fill"></div></div>
-    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne...</div>
+    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne 2026...</div>
 </div>
 
 <div id="info-panel">
@@ -98,11 +86,10 @@
         <span onclick="toggleInfo()" style="font-size: 1.5rem; cursor: pointer;">×</span>
     </div>
     <div id="info-content">
-        <div class="info-item"><span>Nacht (21-6):</span><b>3,72 €/h</b></div>
-        <div class="info-item"><span>Samstag (13-20):</span><b>0,64 €/h</b></div>
-        <div class="info-item"><span>Sonntag:</span><b>6,29 €/h</b></div>
-        <div class="info-item"><span>Feiertag:</span><b>6,87 €/h</b></div>
-        <div class="info-item"><span>4-Uhr-Bonus:</span><b>7,91 €</b></div>
+        <div class="info-item"><span>Nacht-Zeitraum:</span><b>20:00 - 06:00</b></div>
+        <div class="info-item"><span>Samstag-Zulage:</span><b>13:00 - 20:00</b></div>
+        <div class="info-item"><span>Spesen 8h/14h/24h:</span><b id="inf-spesen"></b></div>
+        <div class="info-item"><span>Urlaub Gutschrift:</span><b id="inf-gut"></b></div>
     </div>
     <button onclick="toggleInfo()" style="margin-top: 20px;">Schließen</button>
 </div>
@@ -113,27 +100,11 @@
     <div class="grid"><div><label>Samstag €/h</label><input type="number" id="cfg-samstag" step="0.01"></div><div><label>Sonntag €/h</label><input type="number" id="cfg-sonntag" step="0.01"></div></div>
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
     <div class="grid"><div><label>FAE €/Tag</label><input type="number" id="cfg-fahrt" step="0.01"></div><div><label>Urlaub h/Tag</label><input type="number" id="cfg-gutschrift" step="0.01"></div></div>
-    <hr>
-    <button onclick="toggleImport()" style="background:#475569; margin-top:0; font-size:0.9rem;">📤 SCHICHTEN IMPORTIEREN (LISTE)</button>
-    <button onclick="saveConfig()" style="background:var(--success); margin-top:20px;">SPEICHERN & SCHLIEẞEN</button>
+    <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
+    <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
+    <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
+    <button onclick="saveConfig()" style="background:var(--success)">SPEICHERN & SCHLIEẞEN</button>
     <button onclick="toggleConfig()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
-</div>
-
-<div id="import-panel">
-    <h2 style="margin-top:0">Import via Liste</h2>
-    <p style="font-size: 0.8rem; color: #64748b;">Format: Datum;Typ;Beginn;Ende;Ort;FAE(0/1);;;;</p>
-    <textarea id="import-area" style="width:100%; height:300px; font-family:monospace; font-size:0.75rem; margin-bottom:15px;" placeholder="2026-01-01;dienst;06:36;16:03;BHF;1;;;;"></textarea>
-    <button onclick="processListImport()" style="background:var(--success)">IMPORT STARTEN</button>
-    <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
-</div>
-
-<div id="refresh-dialog" onclick="if(event.target===this) closeRefreshDialog()">
-    <div class="dialog-content">
-        <h3 style="margin-top:0">Alle Schichten neu berechnen</h3>
-        <p style="font-size: 0.8rem;">Überschreibt alle bestehenden Berechnungen mit den aktuellen Tarifen.</p>
-        <button onclick="recalculateAll()" style="background:var(--success)">START</button>
-        <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
-    </div>
 </div>
 
 <div class="card" id="input-card">
@@ -142,37 +113,37 @@
     <input type="hidden" id="edit-id">
     <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
     <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
-    <div id="bereitschaft-felder" style="display:none; background: #fffbeb; padding: 10px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #fde68a;">
-        <label>Bereitschaft Einsatz (für Spesen)</label>
+    <div id="bereitschaft-felder" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
+        <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
     </div>
-    <div class="grid">
-        <div><label>Einsatzstelle</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
-        <div style="display:flex; align-items:center; justify-content:center; padding-top:20px;"><label><input type="checkbox" id="tr" checked> FAE Aktiv</label></div>
+    <div class="pause-box">
+        <label>Pause 1</label>
+        <div class="pause-row"><input type="time" id="p1s"><select id="pd1"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option><option value="45">45 Min</option><option value="60">60 Min</option></select></div>
     </div>
-    <button onclick="add()">Speichern</button>
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; margin-top:10px;">
-        <button class="btn-sub" id="btn-bereit" onclick="toggleStatus('bereit')">Brd.</button>
-        <button class="btn-sub" id="btn-urlaub" onclick="toggleStatus('urlaub')">Url.</button>
-        <button class="btn-sub" id="btn-krank" onclick="toggleStatus('krank')">Krk.</button>
-        <button class="btn-sub" id="btn-ruhe" onclick="toggleStatus('ruhe')">Ruhe</button>
+    <div class="grid">
+        <div><label>Ort</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
+        <div style="display:flex; align-items:center; justify-content:center; padding-top:18px;"><label><input type="checkbox" id="tr" checked> FAE AKTIV</label></div>
+    </div>
+    <button id="main-btn" onclick="add()">Schicht speichern</button>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+        <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereitschaft</button>
+        <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
+        <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
+        <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
     </div>
 </div>
 
 <div id="history"></div>
 
-<div class="version-footer">
-    Lok-Zulagen Rechner V84 (GitHub Edition)<br>
-    Stand: 06.02.2026
-</div>
-
 <script>
-    // --- STATE & CONFIG ---
-    let config = {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
-    let data = [];
-    let activeStatus = 'Dienst';
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+    
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
+    let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
+    let openMonths = new Set([new Date().toISOString().substring(0,7)]);
+    let activeStatus = 'Dienst';
 
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
@@ -183,226 +154,113 @@
     }
     const holidays = getHolidays(2026);
 
-    // --- LOCAL STORAGE LOGIC ---
-    window.onload = loadData;
-
-    function loadData() {
-        document.getElementById('loading').style.display = 'flex';
-        const saved = localStorage.getItem('lok_v84_db');
-        if(saved) {
-            const parsed = JSON.parse(saved);
-            data = parsed.shifts || [];
-            config = parsed.config || config;
-        }
-        render();
-        document.getElementById('loading').style.display = 'none';
-    }
-
-    function sync() {
-        localStorage.setItem('lok_v84_db', JSON.stringify({shifts: data, config: config}));
-        render();
-        // Feedback
-        const header = document.querySelector('.total-summary');
-        header.style.boxShadow = '0 0 20px #10b981';
-        setTimeout(() => header.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)', 1000);
-    }
-
-    // --- IMPORT ---
-    function processListImport() {
-        const text = document.getElementById('import-area').value.trim();
-        if(!text) return;
-        const lines = text.split('\n');
-        let count = 0;
-        lines.forEach(line => {
-            const cols = line.split(';');
-            if(cols.length >= 5) {
-                const typeRaw = cols[1].trim().toLowerCase();
-                let r = {
-                    d: cols[0].trim(),
-                    status: typeRaw.charAt(0).toUpperCase() + typeRaw.slice(1),
-                    s: cols[2].trim() || '', e: cols[3].trim() || '',
-                    loc: cols[4].trim() || 'BHF', tr: cols[5] === '1',
-                    id: Date.now() + Math.random(), ev: '', eb: '', p1s: '', pd1: 0, p2s: '', pd2: 0
-                };
-                if(r.status === 'Bereit' && r.s) { r.ev = r.s; r.eb = r.e; }
-                r = calculateShift(r);
-                data.push(r);
-                count++;
-            }
-        });
-        sync();
-        toggleImport();
-        alert(count + ' Schichten importiert.');
-    }
-
-    // --- CALC V84 ---
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
+
+    function toggleInfo() {
+        const p = document.getElementById('info-panel');
+        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        if(p.style.display === 'block') {
+            document.getElementById('inf-spesen').innerText = `${config.v1.toFixed(2)} / ${config.v2.toFixed(2)} / ${config.v3.toFixed(2)} €`;
+            document.getElementById('inf-gut').innerText = `${config.gutschrift.toFixed(1)} h`;
+        }
+    }
+
+    function toggleConfig() { 
+        const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        if(p.style.display === 'block') Object.keys(config).forEach(k => { if(document.getElementById('cfg-'+k)) document.getElementById('cfg-'+k).value = config[k]; });
+    }
+
+    function saveConfig() {
+        Object.keys(config).forEach(k => { if(document.getElementById('cfg-'+k)) config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
+        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
+    }
 
     function calculateShift(r) {
         let st = r.status.toLowerCase();
-        // Reset Stats
-        r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=0;
-
-        if(['dienst','krank','bereit','dispo','urlaub'].includes(st)) {
-            if(st === 'urlaub') { r.h = config.gutschrift; return r; }
-            
+        r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0;
+        if(['dienst','krank','bereit'].includes(st)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e);
-            if(t1===null || t2===null) { r.h = (st === 'krank' ? config.gutschrift : 0); return r; }
+            if(st === 'krank' && (t1 === null || t2 === null)) { r.h = config.gutschrift; return r; }
+            if(t1===null || t2===null) return r;
             if(t2<=t1) t2+=24;
-            
             let n=0, sz=0, so=0, ft=0, w=0;
+            let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); p.push({s, e:s+r.pd1/60}); }
             for(let i=t1; i<t2; i+=(1/60)) {
-                w+=(1/60);
-                let curr = i % 24;
-                let dt = new Date(r.d); if(i >= 24) dt.setDate(dt.getDate()+1);
-                let isF = holidays.includes(dt.toISOString().split('T')[0]);
-                let isO = dt.getDay() === 0, isA = dt.getDay() === 6;
-                
-                if(curr >= 21 || curr < 6) n+=(1/60); // Nachtzulage 21-6
-                if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && curr >= 13 && curr < 20) sz+=(1/60);
+                if(!p.some(pa => i>=pa.s && i<pa.e)) {
+                    w+=(1/60); let curr=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
+                    let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
+                    if(curr>=20 || curr<6) n+=(1/60);
+                    if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && curr>=13 && curr<20) sz+=(1/60);
+                }
             }
             r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-            r.bonus = ((t1%24 >= 0 && t1%24 <= 4) || (t2%24 >= 0 && t2%24 <= 4)) ? config.bonus : 0;
-            
+            r.bonus=(st!=='krank' && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
             let abw = 0;
-            if(r.tr) {
-                let diff = (st === 'bereit' && r.ev) ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
-                if(diff < 0) diff += 24;
-                abw = (r.loc === 'BRGB') ? (diff + (config.wegeHin+config.wegeRueck)/60) : (diff - 7/60);
+            if (r.tr && st !== 'krank') {
+                let diff = (st === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
+                if(st === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
+                abw = (r.loc === 'BRGB') ? (diff + (config.wegeHin+config.wegeRueck)/60) : (diff - (7/60));
             }
-            r.spesen = abw >= 8 ? (abw >= 24 ? config.v3 : (abw >= 14 ? config.v2 : config.v1)) : 0;
-            r.fae = r.tr ? config.fahrt : 0;
-        }
+            r.spesen = st==='krank'?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
+            r.fae = (r.tr && st !== 'krank') ? config.fahrt : 0; r.faeCount = (r.tr && st !== 'krank') ? 1 : 0;
+        } else if(st==='urlaub') { r.h=config.gutschrift; }
         return r;
     }
 
-    // --- UI ---
     function add() {
-        let r = {
-            d: document.getElementById('d').value, s: document.getElementById('s').value, e: document.getElementById('e').value,
-            ev: document.getElementById('ev').value, eb: document.getElementById('eb').value,
-            loc: document.getElementById('loc').value, tr: document.getElementById('tr').checked,
-            status: activeStatus, id: document.getElementById('edit-id').value || Date.now(),
-            p1s: '', pd1: 0, p2s: '', pd2: 0
-        };
-        if(!r.d) return;
-        r = calculateShift(r);
-        const idx = data.findIndex(x => x.id == r.id);
-        if(idx > -1) data[idx] = r; else data.push(r);
-        cancelEdit();
-        sync();
-    }
-
-    function render() {
-        const hist = document.getElementById('history'); hist.innerHTML = '';
-        const currentYear = "2026";
-        let tH = 0, tN = 0, tZul = 0;
-        
-        data.filter(x => x.d.startsWith(currentYear)).forEach(r => {
-            tH += r.h; tN += r.nH;
-            tZul += (r.nH*config.nacht + r.szH*config.samstag + r.soH*config.sonntag + r.ftH*config.feiertag + r.bonus + r.spesen + r.fae);
-        });
-
-        document.getElementById('h_sum').innerText = tH.toFixed(2);
-        document.getElementById('d_sum').innerText = (tH - (config.jsoll/365 * 37)).toFixed(1); // Demo Saldo
-        document.getElementById('s_offen').innerText = (config.jsoll - tH).toFixed(1);
-        document.getElementById('p_fill').style.width = Math.min(100, (tH/config.jsoll*100)) + '%';
-        document.getElementById('p_text').innerText = (tH/config.jsoll*100).toFixed(1) + '% vom Jahressoll';
-        document.getElementById('extra-vac-summary').innerText = `Zusatzurlaub: ${Math.floor(tN/19.2)} Tage (${tN.toFixed(0)}/96h)`;
-
-        const tree = {};
-        data.sort((a,b) => b.d.localeCompare(a.d)).forEach(r => {
-            const m = r.d.substring(0,7);
-            if(!tree[m]) tree[m] = [];
-            tree[m].push(r);
-        });
-
-        Object.keys(tree).forEach(m => {
-            let mH=0, mZ=0;
-            tree[m].forEach(i => { 
-                mH += i.h; 
-                mZ += (i.nH*config.nacht + i.szH*config.samstag + i.soH*config.sonntag + i.ftH*config.feiertag + i.bonus + i.spesen + i.fae);
-            });
-            let mHtml = `<div class="year-group">
-                <div class="month-header open" onclick="this.nextElementSibling.classList.toggle('open')">
-                    <span>${m} <b>(${mH.toFixed(1)}h)</b></span>
-                    <span class="m-stats">${mZ.toFixed(2)}€</span>
-                </div>
-                <div class="month-content open">
-                    <table>${tree[m].map(r => `
-                        <tr id="row-${r.id}">
-                            <td><b>${r.d.split('-').reverse().join('.')}</b><br><small>${r.status}</small></td>
-                            <td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h</small></td>
-                            <td class="action-btns">
-                                <button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button>
-                                <button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button>
-                            </td>
-                        </tr>`).join('')}
-                    </table>
-                </div>
-            </div>`;
-            hist.innerHTML += mHtml;
-        });
-    }
-
-    function toggleStatus(st) {
-        activeStatus = st.charAt(0).toUpperCase() + st.slice(1);
-        ['bereit','ruhe','urlaub','krank'].forEach(b => {
-            document.getElementById('btn-'+b).classList.toggle('active', activeStatus === (b.charAt(0).toUpperCase()+b.slice(1)));
-        });
-        document.getElementById('bereitschaft-felder').style.display = activeStatus === 'Bereit' ? 'block' : 'none';
+        const d=document.getElementById('d').value; if(!d) return;
+        const id=document.getElementById('edit-id').value;
+        let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value) };
+        r=calculateShift(r);
+        if(id) { const idx = data.findIndex(x => x.id === parseInt(id)); data[idx] = r; r.edited = true; } else { data.push(r); }
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
     }
 
     function edit(id) {
-        const r = data.find(x => x.id == id);
-        document.getElementById('edit-id').value = r.id;
-        document.getElementById('d').value = r.d;
-        document.getElementById('s').value = r.s;
-        document.getElementById('e').value = r.e;
-        document.getElementById('ev').value = r.ev;
-        document.getElementById('eb').value = r.eb;
-        document.getElementById('loc').value = r.loc;
-        document.getElementById('tr').checked = r.tr;
-        toggleStatus(r.status.toLowerCase());
-        document.getElementById('edit-id-view').style.display = 'block';
-        document.getElementById('btn-cancel-edit').style.display = 'flex';
-        window.scrollTo(0,0);
+        const r=data.find(x=>x.id==id); if(!r) return;
+        document.getElementById('edit-id').value=r.id;
+        document.getElementById('d').value=r.d;
+        ['s','e','ev','eb','p1s'].forEach(f => document.getElementById(f).value = r[f] || '');
+        document.getElementById('pd1').value = r.pd1 || 0;
+        document.getElementById('loc').value = r.loc || 'BHF';
+        document.getElementById('tr').checked = r.tr !== false;
+        document.getElementById('edit-id-view').style.display='block';
+        document.getElementById('btn-cancel-edit').style.display='flex';
+        toggleStatus(r.status.toLowerCase()); autoDetectDay();
+        window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
-    function cancelEdit() {
-        document.getElementById('edit-id').value = '';
-        document.getElementById('edit-id-view').style.display = 'none';
-        document.getElementById('btn-cancel-edit').style.display = 'none';
-        ['s','e','ev','eb'].forEach(f => document.getElementById(f).value = '');
-        activeStatus = 'Dienst'; toggleStatus('dienst');
+    function render() {
+        const cont = document.getElementById('history'); cont.innerHTML = '';
+        const curY = new Date().getFullYear().toString();
+        let tH=0, tN=0;
+        const tree = {};
+        data.forEach(r => {
+            const m = r.d.substring(0,7);
+            if(!tree[m]) tree[m] = { items: [], h:0, nH:0, szE:0, soE:0, ftE:0, bE:0, sp:0, fE:0 };
+            const g = tree[m]; g.items.push(r);
+            if(r.d <= new Date().toISOString().split('T')[0]) {
+                g.h+=r.h; g.nH+=r.nH; g.szE+=r.szH*config.samstag; g.soE+=r.soH*config.sonntag; g.ftE+=r.ftH*config.feiertag; g.bE+=r.bonus; g.sp+=r.spesen; g.fE+=r.fae;
+                if(r.d.startsWith(curY)) { tH+=r.h; tN+=r.nH; }
+            }
+        });
+        document.getElementById('h_sum').innerText=tH.toFixed(2);
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(Math.round(tN)/19.2)} Tage`;
+        Object.keys(tree).sort().reverse().forEach(m => {
+            const g = tree[m], open = openMonths.has(m), zul = g.nH*config.nacht + g.szE + g.soE + g.ftE + g.bE;
+            let html = `<div class="year-group"><div class="month-header ${open?'open':''}" onclick="toggleM('${m}')"><span>${m} <b>(${g.h.toFixed(1)}h)</b></span><div class="m-stats"><span>${zul.toFixed(2)}€</span></div></div><div class="month-content ${open?'open':''}"><table>`;
+            g.items.sort((a,b)=>b.d.localeCompare(a.d)).forEach(r => {
+                html += `<tr id="row-${r.id}"><td><b>${r.d.split('-').reverse().join('.')}</b><br><small>${r.status}</small></td><td>${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+            });
+            cont.innerHTML += html + `</table></div></div>`;
+        });
     }
 
-    function del(id) { if(confirm('Löschen?')) { data = data.filter(x => x.id != id); sync(); } }
-    function toggleInfo() { document.getElementById('info-panel').style.display = document.getElementById('info-panel').style.display === 'block' ? 'none' : 'block'; }
-    function toggleConfig() { 
-        document.getElementById('config-panel').style.display = document.getElementById('config-panel').style.display === 'block' ? 'none' : 'block';
-        if(document.getElementById('config-panel').style.display === 'block') {
-            ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift'].forEach(k => document.getElementById('cfg-'+k).value = config[k]);
-        }
-    }
-    function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift'].forEach(k => config[k] = parseFloat(document.getElementById('cfg-'+k).value));
-        sync(); toggleConfig();
-    }
-    function toggleImport() { document.getElementById('import-panel').style.display = document.getElementById('import-panel').style.display === 'block' ? 'none' : 'block'; }
-    function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
-    function recalculateAll() {
-        data = data.map(r => calculateShift(r));
-        sync(); closeRefreshDialog();
-    }
-    function autoDetectDay() {
-        const dStr = document.getElementById('d').value;
-        const dt = new Date(dStr);
-        let l = '🏢 WERKTAG';
-        if(holidays.includes(dStr)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG';
-        document.getElementById('type-display').innerText = l;
-    }
+    function del(id) { if(confirm('Löschen?')) { data=data.filter(r=>r.id!=id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
+    function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
+    function cancelEdit() { document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; ['s','e','p1s','ev','eb'].forEach(i=>document.getElementById(i).value=''); document.getElementById('pd1').value=0; toggleStatus('dienst'); }
+    function toggleStatus(st) { activeStatus = st.charAt(0).toUpperCase() + st.slice(1); ['bereit','ruhe','urlaub','krank'].forEach(b => document.getElementById('btn-'+b).classList.toggle('active', activeStatus === b.charAt(0).toUpperCase()+b.slice(1))); document.getElementById('bereitschaft-felder').style.display = st === 'bereit' ? 'block' : 'none'; }
+    function autoDetectDay() { const d=document.getElementById('d').value; if(!d) return; const dt=new Date(d); document.getElementById('type-display').innerText = holidays.includes(d) ? '🚩 FEIERTAG' : (dt.getDay()===0?'☀️ SONNTAG':(dt.getDay()===6?'📅 SAMSTAG':'🏢 WERKTAG')); }
 </script>
 </body>
 </html>
