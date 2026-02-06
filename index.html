@@ -14,6 +14,8 @@
         label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-left: 4px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box; background: #fff; }
         #config-panel, #import-panel, #info-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 2000; padding: 30px 20px; overflow-y: auto; }
+        #refresh-dialog { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; }
+        .dialog-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; color: var(--text); }
         button { width: 100%; background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
         button:active { transform: scale(0.98); }
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; }
@@ -28,7 +30,6 @@
         .row-nazu { border-left-color: #38bdf8; }
         .row-fae { border-left-color: #fbbf24; }
         .row-sazu { border-left-color: #818cf8; }
-        .row-brgb { border-left-color: #f87171; }
         .row-sozu { border-left-color: #4ade80; }
         .row-fezu { border-left-color: #f472b6; }
         .row-4uhr { border-left-color: #2dd4bf; }
@@ -51,8 +52,6 @@
         .icon-btn { cursor: pointer; background: rgba(255,255,255,0.2); width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-size: 1.2rem; }
         .btn-close-edit { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #e2e8f0; color: #64748b; border-radius: 50%; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer; z-index: 10; }
         .header-info-row { font-size: 0.8rem; text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); line-height: 1.4; }
-        .highlight-edit { animation: pulse-bg 2s infinite; }
-        @keyframes pulse-bg { 0% { background-color: transparent; } 50% { background-color: rgba(37, 99, 235, 0.1); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body>
@@ -60,6 +59,7 @@
 <div class="total-summary">
     <div class="top-icons">
         <span class="icon-btn" onclick="toggleInfo()">ℹ️</span>
+        <span class="icon-btn" onclick="openRefreshDialog()">🔄</span>
         <span class="icon-btn" onclick="toggleConfig()">⚙️</span>
     </div>
     <h3 style="margin:0" id="header-year">Status 2026</h3>
@@ -110,6 +110,16 @@
     <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
 </div>
 
+<div id="refresh-dialog">
+    <div class="dialog-content">
+        <h3 style="margin-top:0">Rückwirkend berechnen</h3>
+        <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum sollen Schichten mit den aktuellen Tarifen neu berechnet werden?</p>
+        <input type="date" id="refresh-date" style="margin-bottom:15px;">
+        <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
+        <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
+    </div>
+</div>
+
 <div class="card" id="input-card">
     <div id="btn-cancel-edit" class="btn-close-edit" onclick="cancelEdit()">×</div>
     <div id="edit-id-view" style="display:none; color:var(--warn); font-weight:bold; margin-bottom:10px; text-align:center;">✎ BEARBEITEN AKTIV</div>
@@ -158,36 +168,14 @@
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
 
-    function toggleImport() {
-        const p = document.getElementById('import-panel');
-        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function processListImport() {
-        const text = document.getElementById('import-area').value.trim();
-        if(!text) return;
-        const lines = text.split('\n');
-        let count = 0;
-        lines.forEach(line => {
-            const cols = line.split(';');
-            if(cols.length >= 5) {
-                const typeRaw = cols[1].trim().toLowerCase();
-                let r = {
-                    d: cols[0].trim(),
-                    status: typeRaw.charAt(0).toUpperCase() + typeRaw.slice(1),
-                    s: cols[2].trim() || '', e: cols[3].trim() || '',
-                    loc: cols[4].trim() || 'BHF', tr: cols[5] === '1',
-                    id: Date.now() + Math.random(), ev: '', eb: '', p1s: '', pd1: 0
-                };
-                if(r.status === 'Bereit' && r.s) { r.ev = r.s; r.eb = r.e; }
-                r = calculateShift(r);
-                data.push(r);
-                count++;
-            }
-        });
-        localStorage.setItem('shifts_p10', JSON.stringify(data));
-        toggleImport(); render();
-        alert(count + ' Schichten importiert.');
+    function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
+    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
+    
+    function recalculateFromDate() {
+        const startD = document.getElementById('refresh-date').value; if(!startD) return;
+        data = data.map(r => r.d >= startD ? calculateShift(r) : r);
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); 
+        closeRefreshDialog(); render();
     }
 
     function calculateShift(r) {
@@ -233,7 +221,7 @@
 
     function render() {
         const cont = document.getElementById('history'); cont.innerHTML = '';
-        const curY = new Date().getFullYear().toString();
+        const curY = "2026";
         let tH=0, tN=0;
         const tree = {};
         data.forEach(r => {
@@ -270,6 +258,23 @@
         document.getElementById('btn-cancel-edit').style.display='flex';
         toggleStatus(r.status.toLowerCase()); autoDetectDay();
         window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function toggleImport() { const p = document.getElementById('import-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
+    function processListImport() {
+        const text = document.getElementById('import-area').value.trim();
+        if(!text) return;
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            const cols = line.split(';');
+            if(cols.length >= 5) {
+                const typeRaw = cols[1].trim().toLowerCase();
+                let r = { d: cols[0].trim(), status: typeRaw.charAt(0).toUpperCase() + typeRaw.slice(1), s: cols[2].trim() || '', e: cols[3].trim() || '', loc: cols[4].trim() || 'BHF', tr: cols[5] === '1', id: Date.now() + Math.random(), ev: '', eb: '', p1s: '', pd1: 0 };
+                if(r.status === 'Bereit' && r.s) { r.ev = r.s; r.eb = r.e; }
+                r = calculateShift(r); data.push(r);
+            }
+        });
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); toggleImport(); render();
     }
 
     function del(id) { if(confirm('Löschen?')) { data=data.filter(r=>r.id!=id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
