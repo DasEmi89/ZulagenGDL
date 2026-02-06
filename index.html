@@ -610,19 +610,19 @@
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
     
     function edit(id) { 
-        const r=data.find(x=>x.id===id || x.id === parseInt(id)); 
+        const r = data.find(x => String(x.id) === String(id)); 
         if(!r) return;
-        document.getElementById('edit-id').value=r.id; 
-        document.getElementById('d').value=r.d; 
+        document.getElementById('edit-id').value = r.id; 
+        document.getElementById('d').value = r.d; 
         ['s','e','ev','eb','p1s','p2s','korrHin','korrRueck'].forEach(f => document.getElementById(f).value = r[f] || '');
         ['pd1','pd2'].forEach(f => document.getElementById(f).value = r[f] || 0);
-        document.getElementById('loc').value=r.loc||'BHF'; 
-        document.getElementById('tr').checked=(r.tr !== undefined) ? !!r.tr : true; 
-        document.getElementById('edit-id-view').style.display='block'; 
-        document.getElementById('btn-cancel-edit').style.display='flex'; 
+        document.getElementById('loc').value = r.loc || 'BHF'; 
+        document.getElementById('tr').checked = (r.tr !== undefined) ? !!r.tr : true; 
+        document.getElementById('edit-id-view').style.display = 'block'; 
+        document.getElementById('btn-cancel-edit').style.display = 'flex'; 
         toggleStatus(r.status.toLowerCase()); 
         autoDetectDay();
-        document.getElementById('input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     function cancelEdit() { 
