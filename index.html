@@ -62,6 +62,7 @@
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
         
+        /* Info Panel Styles */
         .info-item { border-bottom: 1px solid #f1f5f9; padding: 10px 0; display: flex; justify-content: space-between; font-size: 0.85rem; }
         .info-item b { color: var(--p); }
         
@@ -212,10 +213,7 @@
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
-    
-    // HIER WERDEN ALLE SCHICHTEN WIEDER EINGEFÜGT
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
-    
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
     let activeStatus = 'Dienst';
@@ -377,7 +375,7 @@
         if(id) {
             const idx = data.findIndex(x => x.id === parseInt(id));
             if(idx !== -1) {
-                r.edited = true; 
+                r.edited = true; // Flag setzen
                 data[idx] = r;
             }
         } else {
@@ -386,6 +384,7 @@
         
         localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
         
+        // Nach dem Speichern zur Schicht springen
         setTimeout(() => {
             const target = document.getElementById('row-' + r.id);
             if(target) {
