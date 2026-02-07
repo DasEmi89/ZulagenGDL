@@ -61,6 +61,9 @@
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
+        .is-edited-mark { color: var(--warn); font-weight: bold; font-size: 1rem; margin-left: 4px; }
+        .highlight-row { animation: highlightFade 2s ease-out; }
+        @keyframes highlightFade { 0% { background-color: rgba(37, 99, 235, 0.2); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body>
@@ -133,7 +136,10 @@
     <div id="btn-cancel-edit" class="btn-close-edit" onclick="cancelEdit()">×</div>
     <div id="edit-id-view" style="display:none; color:var(--warn); font-weight:bold; margin-bottom:10px; text-align:center;">✎ BEARBEITEN AKTIV</div>
     <input type="hidden" id="edit-id">
-    <div class="grid"><div><label>Datum</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
+    <div class="grid"><div><label>Datum (Von)</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
+    
+    <div id="date-range-box" class="grid" style="display:none;"><div><label>Datum (Bis)</label><input type="date" id="d_end"></div><div></div></div>
+
     <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
     
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
@@ -160,6 +166,7 @@
     <button id="main-btn" onclick="add()">Schicht speichern</button>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
         <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereitschaft</button>
+        <button id="btn-dispo" class="btn-sub" onclick="toggleStatus('dispo')">Dispo</button>
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
@@ -169,8 +176,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.0<br>
-    Stand: 03.02.2026, 08:12 Uhr
+    Aktuelle Versionsnummer 1.1<br>
+    Stand: 07.02.2026, 20:00 Uhr
 </div>
 
 <script>
@@ -279,16 +286,20 @@
     function toggleStatus(st) { 
         let displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        ['bereit','ruhe','urlaub','krank'].forEach(b => {
+        ['bereit','ruhe','urlaub','krank','dispo'].forEach(b => {
             let bStatus = b.charAt(0).toUpperCase() + b.slice(1);
             document.getElementById('btn-'+b).classList.toggle('active', activeStatus === bStatus);
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
+        
+        const showRange = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
+        document.getElementById('date-range-box').style.display = showRange ? 'grid' : 'none';
+        if(!showRange) document.getElementById('d_end').value = '';
     }
 
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
-        if(['dienst','krank','bereit'].includes(statusCheck)) {
+        if(['dienst','krank','bereit','dispo'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
             if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
                 r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
@@ -322,10 +333,44 @@
     }
 
     function add() {
-        const d=document.getElementById('d').value; if(!d) return;
+        const d_start=document.getElementById('d').value; if(!d_start) return;
+        const d_end_in=document.getElementById('d_end').value;
         const id=document.getElementById('edit-id').value;
-        let r={ d, status:activeStatus, id:id?parseInt(id):Date.now(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-        r=calculateShift(r); if(id) data=data.filter(x=>x.id!==parseInt(id)); data.push(r); localStorage.setItem('shifts_p10', JSON.stringify(data)); cancelEdit(); render();
+        
+        let loopStart = new Date(d_start);
+        let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
+        
+        let lastId = null;
+
+        while(loopStart <= loopEnd) {
+            const currentD = loopStart.toISOString().split('T')[0];
+            let r={ d: currentD, status:activeStatus, id:id?parseInt(id):Date.now()+Math.random(), s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+            
+            if(id) { 
+                r.isEdited = true;
+                data=data.filter(x=>x.id!==parseInt(id));
+            }
+
+            r=calculateShift(r); 
+            data.push(r);
+            lastId = r.id;
+            
+            loopStart.setDate(loopStart.getDate() + 1);
+        }
+
+        localStorage.setItem('shifts_p10', JSON.stringify(data)); 
+        cancelEdit(); 
+        render();
+        
+        if(lastId) {
+            setTimeout(() => {
+                const el = document.getElementById('row-' + lastId);
+                if(el) {
+                    el.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    el.classList.add('highlight-row');
+                }
+            }, 100);
+        }
     }
 
     function del(id) { if(confirm('Löschen?')) { data=data.filter(r=>r.id!==id); localStorage.setItem('shifts_p10', JSON.stringify(data)); render(); } }
@@ -354,7 +399,7 @@
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
-                if(st === 'dienst' || st === 'bereit') yS.arbeit++;
+                if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
                 
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
@@ -444,7 +489,8 @@
                             const locText = (r.status.toLowerCase() === 'dienst' || r.status.toLowerCase() === 'bereit') ? ` (${r.loc})` : '';
                             const displayStatusFormatted = r.status.charAt(0).toUpperCase() + r.status.slice(1);
                             const rowOpacity = isFuture ? 'opacity: 0.6;' : '';
-                            return `<tr><td style="${rowOpacity}"><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            const editMark = r.isEdited ? ' <span class="is-edited-mark">✎</span>' : '';
+                            return `<tr id="row-${r.id}"><td style="${rowOpacity}"><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatusFormatted}${editMark}${isFuture ? ' (geplant)' : ''}</small></td><td style="${rowOpacity}">${r.s||'--'}-${r.e||'--'}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table>
                     </div>
                 </div>`;
@@ -467,7 +513,7 @@
     }
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
-        ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
+        ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck','d_end'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
     document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
