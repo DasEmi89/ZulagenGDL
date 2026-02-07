@@ -171,6 +171,7 @@
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
+        <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
     </div>
 </div>
 
@@ -287,13 +288,13 @@
     function toggleStatus(st) { 
         let displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        ['bereit','ruhe','urlaub','krank','dispo'].forEach(b => {
+        ['bereit','ruhe','urlaub','krank','dispo','schulung'].forEach(b => {
             let bStatus = b.charAt(0).toUpperCase() + b.slice(1);
             document.getElementById('btn-'+b).classList.toggle('active', activeStatus === bStatus);
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         
-        const showRange = ['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus);
+        const showRange = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus);
         document.getElementById('date-range-box').style.display = showRange ? 'grid' : 'none';
         if(!showRange) document.getElementById('d_end').value = '';
     }
@@ -328,7 +329,7 @@
             }
             r.spesen = statusCheck==='krank'?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
             r.fae = (r.tr && statusCheck !== 'krank') ? config.fahrt : 0; r.faeCount = (r.tr && statusCheck !== 'krank') ? 1 : 0;
-        } else if(statusCheck==='urlaub') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
+        } else if(statusCheck==='urlaub' || statusCheck==='schulung') { r.h=config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         return r;
     }
@@ -339,7 +340,7 @@
         const id=document.getElementById('edit-id').value;
         
         let loopStart = new Date(d_start);
-        let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
+        let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         
         let lastId = null;
 
@@ -533,7 +534,7 @@
 
         data.forEach(shift => {
             const statusFormatted = shift.status.charAt(0).toUpperCase() + shift.status.slice(1);
-            const isAllDay = !shift.s || !shift.e || ['urlaub', 'krank', 'ruhe'].includes(shift.status.toLowerCase());
+            const isAllDay = !shift.s || !shift.e || ['urlaub', 'krank', 'ruhe', 'schulung'].includes(shift.status.toLowerCase());
             
             let summary, startStr, endStr;
 
