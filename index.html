@@ -101,7 +101,7 @@
         <div id="extra-vac-summary" style="color: #93c5fd;">Zusatzurlaub: 0 Tage (0.00/96.00h)</div>
     </div>
     <div class="progress-bar"><div id="p_fill" class="progress-fill"></div></div>
-    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne 2026...</div>
+    <div style="font-size: 0.6rem; margin-top: 5px; opacity: 0.8; text-align: center;" id="p_text">Berechne...</div>
 </div>
 
 <div id="config-panel">
@@ -201,8 +201,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 2.1<br>
-    Stand: 08.02.2026, 12:45 Uhr
+    Aktuelle Versionsnummer 2.2<br>
+    Stand: 08.02.2026, 13:15 Uhr
 </div>
 
 <script>
@@ -214,7 +214,6 @@
         return [...fixed, calc(-2), calc(1), calc(39), calc(50)];
     }
 
-    const holidays = getHolidays(2026);
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
@@ -352,7 +351,8 @@
     function autoDetectDay() {
         const dStr = document.getElementById('d').value; if(!dStr) return;
         const dt = new Date(dStr); let l = '🏢 WERKTAG';
-        if(holidays.includes(dStr)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG';
+        const yearHolidays = getHolidays(dt.getFullYear());
+        if(yearHolidays.includes(dStr)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG';
         document.getElementById('type-display').innerText = l;
         checkContextButtons(dStr);
         checkNightShift();
@@ -406,6 +406,7 @@
 
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
+        const yearHolidays = getHolidays(new Date(r.d).getFullYear());
         if(['dienst','krank','bereit','dispo','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
             if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
@@ -418,7 +419,8 @@
             for(let i=t1; i<t2; i+=(1/60)) {
                 if(!p.some(pa => i>=pa.s && i<pa.e)) {
                     w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
-                    let isF=holidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
+                    const loopHolidays = getHolidays(dt.getFullYear());
+                    let isF=loopHolidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
                     if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
@@ -458,16 +460,25 @@
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         let lastId = null;
         let hasConflict = false;
+        
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
             let formattedStatus = activeStatus.charAt(0).toUpperCase() + activeStatus.slice(1);
             let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:formattedStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-            if(checkConflicts(r)) {
-                alert(`Konflikt am ${currentD}! Schicht überschneidet sich mit bestehendem Eintrag.`);
-                hasConflict = true;
-                break;
+            
+            // Intelligentes Überschreiben für Ganztags-Status
+            const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
+            if (overwriteStatuses.includes(formattedStatus)) {
+                data = data.filter(x => x.d !== currentD || (id && x.id === parseInt(id)));
+            } else {
+                if(checkConflicts(r)) {
+                    alert(`Konflikt am ${currentD}! Schicht überschneidet sich mit bestehendem Eintrag.`);
+                    hasConflict = true;
+                    break;
+                }
             }
+            
             if(id) { r.isEdited = true; data=data.filter(x=>x.id!==parseInt(id)); }
             r=calculateShift(r); data.push(r); lastId = r.id;
             loopStart.setDate(loopStart.getDate() + 1);
@@ -490,18 +501,16 @@
         const cont = document.getElementById('history'); cont.innerHTML = '';
         const todayStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
-        
-        // Berechnung Fokus-Monate
         const now = new Date();
         const focusMonths = [];
         for(let i = -1; i <= 1; i++) {
             focusMonths.push(new Date(now.getFullYear(), now.getMonth() + i, 1).toISOString().substring(0,7));
         }
-
         let tH_total=0, tV_total=0, tN_total=0; 
         const tree = {};
         data.forEach(r => {
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
+            const yearHolidays = getHolidays(parseInt(y));
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
             const yS = tree[y].stats, mG = tree[y].months[m];
@@ -509,14 +518,13 @@
             let st = r.status.toLowerCase();
             if(!isFuture) {
                 if(st === 'krank' || st === 'ruhe nach krank') yS.krank++;
-                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
+                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
-
         let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
@@ -526,20 +534,14 @@
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
-
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
-            
-            let focusHtml = "";
-            let otherHtml = "";
-            let otherCount = 0;
-
+            let focusHtml = ""; let otherHtml = ""; let otherCount = 0;
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
                 const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
-                
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
@@ -566,22 +568,13 @@
                             let displayStatus = r.status.charAt(0).toUpperCase() + r.status.slice(1);
                             return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>📍 ${r.loc}</span><span>${r.tr?'🚗':''}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
-                
-                if(isFocus) focusHtml += mHtml;
-                else { otherHtml += mHtml; otherCount++; }
+                if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
             });
-
             yearHtml += focusHtml;
             if(otherCount > 0) {
                 const oOpen = openOthers.has(y);
-                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')">
-                    <span>Weitere Monate (${otherCount})</span>
-                </div>
-                <div class="month-content ${oOpen?'open':''}">
-                    ${otherHtml}
-                </div>`;
+                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherCount})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
             }
-
             yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
         });
     }
