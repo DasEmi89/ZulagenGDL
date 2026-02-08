@@ -141,7 +141,7 @@
     
     <div id="date-range-box" class="grid" style="display:none;"><div><label>Datum (Bis)</label><input type="date" id="d_end"></div><div></div></div>
 
-    <div class="grid"><div><label>Beginn</label><input type="time" id="s"></div><div><label>Ende</label><input type="time" id="e"></div></div>
+    <div class="grid"><div><label>Beginn</label><input type="time" id="s" onchange="checkNightShift()"></div><div><label>Ende</label><input type="time" id="e" onchange="checkNightShift()"></div></div>
     
     <div id="dispo-presets" style="display:none; margin-bottom: 12px; gap: 8px; grid-template-columns: 1fr 1fr 1fr;" class="grid">
         <button class="btn-sub" onclick="setDispoTime('04:00','12:00')">Früh (4-12)</button>
@@ -214,6 +214,27 @@
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
+    function checkNightShift() {
+        const d_start = document.getElementById('d').value;
+        const s = document.getElementById('s').value;
+        const e = document.getElementById('e').value;
+        if(!d_start) return;
+        let d_end = d_start;
+        if(s && e) {
+            if(timeToDec(e) <= timeToDec(s)) {
+                let dt = new Date(d_start);
+                dt.setDate(dt.getDate() + 1);
+                d_end = dt.toISOString().split('T')[0];
+                document.getElementById('date-range-box').style.display = 'grid';
+            } else {
+                if(!['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus)) {
+                    document.getElementById('date-range-box').style.display = 'none';
+                }
+            }
+        }
+        document.getElementById('d_end').value = d_end;
+    }
+
     async function exportData() {
         const str = JSON.stringify({ data, config, date: new Date().toLocaleString() });
         try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
@@ -275,7 +296,7 @@
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
+    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.none = 'none'; }
     function recalculateFromDate() {
         const startD = document.getElementById('refresh-date').value; if(!startD) return;
         data = data.map(r => r.d >= startD ? calculateShift(r) : r);
@@ -296,10 +317,10 @@
         if(holidays.includes(dStr)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG';
         document.getElementById('type-display').innerText = l;
         checkContextButtons(dStr);
+        checkNightShift();
     }
 
     function checkContextButtons(date) {
-        // Findet Schichten, die an diesem Tag enden (Nachtschicht-Ende)
         const hasNightEnd = data.some(r => {
             const tStart = timeToDec(r.s);
             const tEnd = timeToDec(r.e);
@@ -322,6 +343,7 @@
     function setDispoTime(start, end) {
         document.getElementById('s').value = start;
         document.getElementById('e').value = end;
+        checkNightShift();
     }
     
     function toggleStatus(st) { 
@@ -349,7 +371,7 @@
         }
         
         if(!isAllDayOff && !isTimedOff) {
-            document.getElementById('d_end').value = '';
+            checkNightShift();
         }
     }
 
@@ -390,14 +412,11 @@
 
     function checkConflicts(newR) {
         const nS = new Date(newR.d + 'T' + (newR.s || '00:00')).getTime();
-        let nE = new Date(newR.d + 'T' + (newR.e || '23:59')).getTime();
-        if(timeToDec(newR.e) <= timeToDec(newR.s)) nE += 86400000;
-
+        let nE = new Date((newR.d_end || newR.d) + 'T' + (newR.e || '23:59')).getTime();
         return data.some(oldR => {
             if(oldR.id === newR.id) return false;
             const oS = new Date(oldR.d + 'T' + (oldR.s || '00:00')).getTime();
-            let oE = new Date(oldR.d + 'T' + (oldR.e || '23:59')).getTime();
-            if(timeToDec(oldR.e) <= timeToDec(oldR.s)) oE += 86400000;
+            let oE = new Date((oldR.d_end || oldR.d) + 'T' + (oldR.e || '23:59')).getTime();
             return (nS < oE && nE > oS);
         });
     }
@@ -416,7 +435,7 @@
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
-            let r={ d: currentD, status:activeStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+            let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:activeStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
             
             if(checkConflicts(r)) {
                 alert(`Konflikt am ${currentD}! Schicht überschneidet sich mit bestehendem Eintrag.`);
@@ -547,18 +566,12 @@
 
     function exportToGoogleCalendar() {
         let icsFile = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lok-Zulagen-Rechner//DE','METHOD:PUBLISH','X-WR-CALNAME:Dienstplan','X-WR-TIMEZONE:Europe/Berlin'];
-        
-        const filterLimit = new Date();
-        filterLimit.setDate(filterLimit.getDate() - 7);
-        filterLimit.setHours(0,0,0,0);
-
+        const filterLimit = new Date(); filterLimit.setDate(filterLimit.getDate() - 7); filterLimit.setHours(0,0,0,0);
         data.filter(r => new Date(r.d) >= filterLimit).forEach(shift => {
             const statusFormatted = shift.status;
             const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
-            
             let summary, startStr, endStr;
-
             if (isAllDay) {
                 summary = statusFormatted;
                 const d1 = shift.d.replace(/-/g, '');
@@ -568,12 +581,9 @@
             } else {
                 summary = isTimedOff ? statusFormatted : `Dienst: ${shift.s} - ${shift.e} (${statusFormatted})`;
                 const tStart = shift.d.replace(/-/g, '') + 'T' + shift.s.replace(':', '') + '00';
-                let dEnd = new Date(shift.d);
-                if (timeToDec(shift.e) <= timeToDec(shift.s)) dEnd.setDate(dEnd.getDate() + 1);
-                const tEnd = dEnd.toISOString().split('T')[0].replace(/-/g, '') + 'T' + shift.e.replace(':', '') + '00';
+                const tEnd = (shift.d_end || shift.d).replace(/-/g, '') + 'T' + shift.e.replace(':', '') + '00';
                 startStr = `DTSTART;TZID=Europe/Berlin:${tStart}`; endStr = `DTEND;TZID=Europe/Berlin:${tEnd}`;
             }
-
             icsFile.push('BEGIN:VEVENT');
             icsFile.push(`UID:shift_${shift.id}_${shift.d.replace(/-/g,'')}@lokrechner.local`);
             icsFile.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
@@ -582,13 +592,9 @@
             icsFile.push(`DESCRIPTION:Status: ${statusFormatted} | Dauer: ${shift.h.toFixed(2)}h`);
             icsFile.push('END:VEVENT');
         });
-
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`;
-        link.click();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
         showToast("iCal (letzte 7 Tage + Zukunft) bereit!");
     }
 </script>
