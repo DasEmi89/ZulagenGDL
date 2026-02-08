@@ -128,7 +128,7 @@
         <h3 style="margin-top:0">Tarif-Update</h3>
         <p style="font-size: 0.8rem; color: #64748b;">Ab welchem Datum sollen Schichten neu berechnet werden?</p>
         <input type="date" id="refresh-date" style="margin-bottom:15px;">
-        <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
+        <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BEREchnen</button>
         <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
     </div>
 </div>
@@ -186,8 +186,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.5<br>
-    Stand: 08.02.2026, 05:15 Uhr
+    Aktuelle Versionsnummer 1.6<br>
+    Stand: 08.02.2026, 05:45 Uhr
 </div>
 
 <script>
@@ -278,9 +278,7 @@
             if(p.data && Array.isArray(p.data)) {
                 let added = 0;
                 let conflicts = 0;
-                
                 p.data.forEach(item => {
-                    // Falls d_end fehlt, für Nachtschichten ergänzen (für Konfliktcheck)
                     if(!item.d_end && item.s && item.e) {
                         if(timeToDec(item.e) <= timeToDec(item.s)) {
                             let dt = new Date(item.d);
@@ -292,10 +290,8 @@
                     } else if (!item.d_end) {
                         item.d_end = item.d;
                     }
-
                     const exists = data.some(existing => existing.id === item.id);
                     const conflict = checkConflicts(item);
-                    
                     if(!exists && !conflict) {
                         const processed = calculateShift(item);
                         data.push(processed);
@@ -304,7 +300,6 @@
                         conflicts++;
                     }
                 });
-
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
                 toggleImport();
@@ -543,7 +538,17 @@
         ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck','d_end'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
-    document.getElementById('d').value=new Date().toISOString().split('T')[0]; render();
+
+    // Startup Logic
+    const initToday = new Date().toISOString().split('T')[0];
+    const todayShift = data.find(r => r.d === initToday);
+    if(todayShift) {
+        edit(todayShift.id);
+    } else {
+        document.getElementById('d').value = initToday;
+        autoDetectDay();
+    }
+    render();
 
     function exportToGoogleCalendar() {
         let icsFile = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lok-Zulagen-Rechner//DE','METHOD:PUBLISH','X-WR-CALNAME:Dienstplan','X-WR-TIMEZONE:Europe/Berlin'];
