@@ -39,6 +39,8 @@
         .row-sozu { border-left-color: #4ade80; }
         .row-fezu { border-left-color: #f472b6; }
         .row-4uhr { border-left-color: #2dd4bf; }
+        .row-nacht-count { border-left-color: #a78bfa; }
+        
         .val-h { color: #38bdf8; font-weight: 500; }
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
@@ -49,10 +51,17 @@
         tr:nth-child(even) { background: #f8fafc; }
         td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
         
-        /* Design-Anpassungen Tag/Zukunft */
+        /* Farb-Markierungen der Schichten */
+        .type-dienst { border-left: 4px solid var(--p) !important; }
+        .type-bereit, .type-dispo { border-left: 4px solid var(--warn) !important; }
+        .type-krank, .type-ruhe-krank { border-left: 4px solid var(--danger) !important; }
+        .type-urlaub { border-left: 4px solid var(--success) !important; }
+        .type-ruhe, .type-schulung { border-left: 4px solid #64748b !important; }
+
         .row-today { background-color: rgba(37, 99, 235, 0.08) !important; }
-        .row-today td:first-child { border-left: 4px solid var(--p); }
         .is-future td:not(.action-btns) { opacity: 0.45; }
+        
+        .row-status-info { font-size: 0.65rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; }
 
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; }
         .btn-mini { padding: 6px 10px; border-radius: 6px; border: none; color: white; cursor: pointer; font-size: 0.7rem; font-weight: bold; width: 35px; height: 35px; }
@@ -192,8 +201,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.7<br>
-    Stand: 08.02.2026, 06:10 Uhr
+    Aktuelle Versionsnummer 1.8<br>
+    Stand: 08.02.2026, 06:40 Uhr
 </div>
 
 <script>
@@ -384,9 +393,13 @@
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
+        
         const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
-        const isAllDayOff = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus);
-        document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
+        // Komfort: Krank erlaubt nun auch Zeit-Eingaben
+        const isAllDayOff = ['Urlaub', 'Ruhe', 'Schulung'].includes(activeStatus);
+        
+        document.getElementById('date-range-box').style.display = (isAllDayOff || activeStatus === 'Krank') && !isTimedOff ? 'grid' : 'none';
+        
         if(isTimedOff) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
@@ -480,16 +493,17 @@
         const tree = {};
         data.forEach(r => {
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
-            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
-            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
+            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
+            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
             const yS = tree[y].stats, mG = tree[y].months[m];
             mG.items.push(r);
             let st = r.status.toLowerCase();
             if(!isFuture) {
-                if(st === 'krank') yS.krank++;
+                if(st === 'krank' || st === 'ruhe nach krank') yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
                 if(r.loc === 'BRGB') yS.brgb++;
+                if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0); if(r.loc==='BRGB') mG.br++;
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
@@ -505,27 +519,41 @@
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
-            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Krank: ${yData.stats.krank}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
+            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
-                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
+                            <div class="detail-row row-nacht-count"><span>Nächte:</span><span class="val-count">${mG.nCounts}x</span></div>
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
                         </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
-                            const wd = wDaysShort[new Date(r.d).getDay()], locText = (['dienst','bereit','dispo'].includes(r.status.toLowerCase())) ? ` (${r.loc})` : '';
+                            const wd = wDaysShort[new Date(r.d).getDay()];
                             const isNight = r.d !== (r.d_end || r.d);
                             const isToday = r.d === todayStr;
                             const isFutureRow = r.d > todayStr;
-                            const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future' : '');
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            
+                            // Farb-Klasse bestimmen
+                            let typeClass = 'type-dienst';
+                            let stLower = r.status.toLowerCase();
+                            if(stLower.includes('bereit')) typeClass = 'type-bereit';
+                            else if(stLower.includes('dispo')) typeClass = 'type-dispo';
+                            else if(stLower.includes('krank')) typeClass = 'type-krank';
+                            else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
+                            else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
+
+                            const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
+                            const faeIcon = r.tr ? '🚗' : '';
+                            const locIcon = r.loc ? `📍 ${r.loc}` : '';
+
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
             });
             yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
@@ -551,12 +579,7 @@
     // Startup Logic
     const initToday = new Date().toISOString().split('T')[0];
     const todayShift = data.find(r => r.d === initToday);
-    if(todayShift) {
-        edit(todayShift.id);
-    } else {
-        document.getElementById('d').value = initToday;
-        autoDetectDay();
-    }
+    if(todayShift) edit(todayShift.id); else { document.getElementById('d').value = initToday; autoDetectDay(); }
     render();
 
     function exportToGoogleCalendar() {
@@ -565,6 +588,7 @@
         data.filter(r => new Date(r.d) >= filterLimit).forEach(shift => {
             const statusFormatted = shift.status.charAt(0).toUpperCase() + shift.status.slice(1);
             const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
+            // Krank bleibt im Kalender ein ganztägiges Ereignis ohne Zeiten
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
             let summary, startStr, endStr;
             if (isAllDay) {
