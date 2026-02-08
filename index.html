@@ -173,14 +173,14 @@
         <label>Pause 2 (Beginn & Dauer)</label>
         <div class="pause-row"><input type="time" id="p2s"><select id="pd2"><option value="0">0 Min</option><option value="15">15 Min</option><option value="30">30 Min</option></select></div>
     </div>
-    <div class="grid">
+    <div class="grid" id="loc-section">
         <div><label>Ort</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
             <div><label>Korr. Hin</label><input type="number" id="korrHin" placeholder="Min"></div>
             <div><label>Korr. Rück</label><input type="number" id="korrRueck" placeholder="Min"></div>
         </div>
     </div>
-    <div class="grid" style="align-items: center; justify-content: end;">
+    <div class="grid" style="align-items: center; justify-content: end;" id="fae-section">
         <label style="display:flex; align-items:center; gap:8px; cursor: pointer;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
     </div>
     <button id="main-btn" onclick="add()">Schicht speichern</button>
@@ -199,8 +199,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 2.3<br>
-    Stand: 08.02.2026, 13:45 Uhr
+    Aktuelle Versionsnummer 2.4<br>
+    Stand: 08.02.2026, 14:15 Uhr
 </div>
 
 <script>
@@ -398,6 +398,11 @@
         
         document.getElementById('date-range-box').style.display = (isAllDayOff || activeStatus === 'Krank') && !isTimedOff ? 'grid' : 'none';
         
+        // FAE und Ort nur für relevante Status anzeigen
+        const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
+        document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
+        document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
+
         if(isTimedOff) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
@@ -569,8 +574,14 @@
                             else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
                             else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
                             const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
+                            
+                            // Symbole nur für relevante Status anzeigen
+                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe aus nacht', 'ruhe nach krank'].includes(stLower);
+                            const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
+                            const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
+
                             let displayStatus = r.status.charAt(0).toUpperCase() + r.status.slice(1);
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>📍 ${r.loc}</span><span>${r.tr?'🚗':''}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
             });
