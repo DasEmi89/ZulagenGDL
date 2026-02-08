@@ -21,15 +21,15 @@
         button { width: 100%; background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 1rem; margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
         button:active { transform: scale(0.98); }
         .btn-sub { background: #64748b; padding: 10px; font-size: 0.8rem; border-radius: 10px; color: white; border: none; cursor: pointer; border: 2px solid transparent; }
-        /* Hervorhebung aktiver Buttons */
-        .btn-sub.active { background: var(--success) !important; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 2px solid white !important; transform: scale(1.02); }
-        .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
         
+        /* Hervorhebung aktiver Buttons */
+        .btn-sub.active { background: var(--success) !important; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 2px solid white !important; transform: scale(1.02); }
+        
+        .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
         .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
-        
         .month-details-bar { background: #1a222f; color: #cbd5e0; padding: 12px 15px; font-size: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; border-bottom: 2px solid #2d3748; }
         .detail-row { display: flex; justify-content: space-between; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid transparent; }
         .row-nazu { border-left-color: #38bdf8; }
@@ -43,7 +43,6 @@
         .val-eur { color: #4ade80; font-weight: 800; font-family: monospace; }
         .val-count { color: #fbbf24; font-weight: 800; }
         .spesen-bar { background: #111827; color: #4ade80; padding: 10px 15px; font-size: 0.9rem; border-bottom: 1px solid #4a5568; font-weight: bold; }
-        
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; }
@@ -176,13 +175,10 @@
         <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereitschaft</button>
         <button id="btn-dispo" class="btn-sub" onclick="toggleStatus('dispo')">Dispo</button>
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
-        
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
-
         <button id="btn-ruhe-nacht" class="btn-sub" style="display:none; background:var(--warn) !important;" onclick="toggleStatus('ruhe-nacht')">Ruhe aus Nacht</button>
         <button id="btn-ruhe-krank" class="btn-sub" style="display:none; background:var(--warn) !important;" onclick="toggleStatus('ruhe-krank')">Ruhe nach krank</button>
-        
         <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
     </div>
 </div>
@@ -190,8 +186,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 1.4<br>
-    Stand: 08.02.2026, 04:40 Uhr
+    Aktuelle Versionsnummer 1.5<br>
+    Stand: 08.02.2026, 05:15 Uhr
 </div>
 
 <script>
@@ -280,18 +276,48 @@
         try {
             const p = JSON.parse(jsonStr);
             if(p.data && Array.isArray(p.data)) {
-                const newItems = p.data.filter(newItem => !data.some(existingItem => existingItem.id === newItem.id));
-                data = [...data, ...newItems];
+                let added = 0;
+                let conflicts = 0;
+                
+                p.data.forEach(item => {
+                    // Falls d_end fehlt, für Nachtschichten ergänzen (für Konfliktcheck)
+                    if(!item.d_end && item.s && item.e) {
+                        if(timeToDec(item.e) <= timeToDec(item.s)) {
+                            let dt = new Date(item.d);
+                            dt.setDate(dt.getDate() + 1);
+                            item.d_end = dt.toISOString().split('T')[0];
+                        } else {
+                            item.d_end = item.d;
+                        }
+                    } else if (!item.d_end) {
+                        item.d_end = item.d;
+                    }
+
+                    const exists = data.some(existing => existing.id === item.id);
+                    const conflict = checkConflicts(item);
+                    
+                    if(!exists && !conflict) {
+                        const processed = calculateShift(item);
+                        data.push(processed);
+                        added++;
+                    } else if (conflict && !exists) {
+                        conflicts++;
+                    }
+                });
+
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
                 render();
                 toggleImport();
-                document.getElementById('import-area').value = '';
-                alert(newItems.length + " neue Schichten erfolgreich zum bestehenden Plan hinzugefügt!");
+                if(conflicts > 0) {
+                    alert(`${added} Schichten importiert. ${conflicts} Schichten übersprungen wegen Konflikten mit deiner Vorplanung (Ruhe/Urlaub).`);
+                } else {
+                    alert(`${added} neue Schichten erfolgreich hinzugefügt!`);
+                }
             } else {
                 alert("Format ungültig: Das 'data' Array fehlt.");
             }
         } catch(e) {
-            alert("Fehler beim Verarbeiten der Daten. Bitte Datei oder Text prüfen.");
+            alert("Fehler beim Verarbeiten der Daten.");
         }
     }
 
@@ -328,10 +354,8 @@
             return (r.d === date && tEnd <= tStart && tEnd > 0) || 
                    (new Date(r.d).getTime() + 86400000 === new Date(date).getTime() && tEnd <= tStart && tEnd > 0);
         });
-
         const normalBtns = ['btn-krank', 'btn-ruhe'];
         const contextBtns = ['btn-ruhe-nacht', 'btn-ruhe-krank'];
-
         if(hasNightEnd) {
             normalBtns.forEach(id => document.getElementById(id).style.display = 'none');
             contextBtns.forEach(id => document.getElementById(id).style.display = 'block');
@@ -350,7 +374,6 @@
     function toggleStatus(st) { 
         let displayStatus = st.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        
         ['bereit','ruhe','urlaub','krank','dispo','schulung','ruhe-nacht','ruhe-krank'].forEach(b => {
             const btn = document.getElementById('btn-'+b);
             if(btn) {
@@ -358,22 +381,13 @@
                 btn.classList.toggle('active', activeStatus === bStatus);
             }
         }); 
-
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
-
         const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus);
-        
         document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
-        
-        if(isTimedOff) {
-            document.getElementById('e').value = '23:59';
-        }
-        
-        if(!isAllDayOff && !isTimedOff) {
-            checkNightShift();
-        }
+        if(isTimedOff) document.getElementById('e').value = '23:59';
+        if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
 
     function calculateShift(r) {
@@ -426,40 +440,26 @@
         const d_start=document.getElementById('d').value; if(!d_start) return;
         const d_end_in=document.getElementById('d_end').value;
         const id=document.getElementById('edit-id').value;
-        
         let loopStart = new Date(d_start);
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
-        
         let lastId = null;
         let hasConflict = false;
-
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
             let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:activeStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-            
             if(checkConflicts(r)) {
                 alert(`Konflikt am ${currentD}! Schicht überschneidet sich mit bestehendem Eintrag.`);
                 hasConflict = true;
                 break;
             }
-
-            if(id) { 
-                r.isEdited = true;
-                data=data.filter(x=>x.id!==parseInt(id));
-            }
-
-            r=calculateShift(r); 
-            data.push(r);
-            lastId = r.id;
-            
+            if(id) { r.isEdited = true; data=data.filter(x=>x.id!==parseInt(id)); }
+            r=calculateShift(r); data.push(r); lastId = r.id;
             loopStart.setDate(loopStart.getDate() + 1);
         }
-
         if(!hasConflict) {
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            cancelEdit(); 
-            render();
+            cancelEdit(); render();
             if(lastId) {
                 setTimeout(() => {
                     const el = document.getElementById('row-' + lastId);
@@ -476,20 +476,13 @@
         const todayStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
         let tH_total=0, tV_total=0, tN_total=0; 
-        
         const tree = {};
         data.forEach(r => {
-            const y = r.d.substring(0,4);
-            const m = r.d.substring(0,7);
-            const isFuture = r.d > todayStr;
-            
+            const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0 } };
             if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0 };
-            
-            const yS = tree[y].stats;
-            const mG = tree[y].months[m];
+            const yS = tree[y].stats, mG = tree[y].months[m];
             mG.items.push(r);
-            
             let st = r.status.toLowerCase();
             if(!isFuture) {
                 if(st === 'krank') yS.krank++;
@@ -500,37 +493,24 @@
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
-
         let now=new Date(), diffD=Math.max(1, Math.ceil((now-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
-        
         let roundedTotalN = 0;
-        Object.keys(tree).forEach(y => {
-            if(y === currentYear) {
-                Object.keys(tree[y].months).forEach(m => {
-                   let rawM = tree[y].months[m].nH;
-                   roundedTotalN += Math.round(rawM);
-                });
-            }
-        });
-
+        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); }); } });
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
-
         Object.keys(tree).sort().reverse().forEach(y => {
-            const yData = tree[y];
-            const yOpen = openYears.has(y);
+            const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Krank: ${yData.stats.krank}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
-                const roundedM_NH = Math.round(mG.nH), nE = roundedM_NH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag;
-                const bruttoZulagen = nE + szE + soE + ftE + mG.bE, nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.65);
-                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${bruttoZulagen.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                yearHtml += `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>BRGB: ${mG.br}x</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${roundedM_NH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>BRGB:</span><span class="val-count">${mG.br}x</span></div>
@@ -540,9 +520,8 @@
                         </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                             const wd = wDaysShort[new Date(r.d).getDay()], locText = (['dienst','bereit','dispo'].includes(r.status.toLowerCase())) ? ` (${r.loc})` : '';
-                            const editMark = r.isEdited ? ' <span class="is-edited-mark">✎</span>' : '';
                             const isNight = r.d !== (r.d_end || r.d);
-                            return `<tr id="row-${r.id}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${editMark}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr id="row-${r.id}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h${locText}</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
             });
             yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
@@ -570,7 +549,6 @@
         let icsFile = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lok-Zulagen-Rechner//DE','METHOD:PUBLISH','X-WR-CALNAME:Dienstplan','X-WR-TIMEZONE:Europe/Berlin'];
         const filterLimit = new Date(); filterLimit.setDate(filterLimit.getDate() - 7); filterLimit.setHours(0,0,0,0);
         data.filter(r => new Date(r.d) >= filterLimit).forEach(shift => {
-            // Status mit großem Anfangsbuchstaben
             const statusFormatted = shift.status.charAt(0).toUpperCase() + shift.status.slice(1);
             const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
@@ -582,7 +560,6 @@
                 const d2 = dEnd.toISOString().split('T')[0].replace(/-/g, '');
                 startStr = `DTSTART;VALUE=DATE:${d1}`; endStr = `DTEND;VALUE=DATE:${d2}`;
             } else {
-                // Bereinigter Titel ohne doppeltes "Dienst"
                 summary = isTimedOff ? statusFormatted : `Dienst ${shift.s} - ${shift.e}`;
                 const tStart = shift.d.replace(/-/g, '') + 'T' + shift.s.replace(':', '') + '00';
                 const tEnd = (shift.d_end || shift.d).replace(/-/g, '') + 'T' + shift.e.replace(':', '') + '00';
