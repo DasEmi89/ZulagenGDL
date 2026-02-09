@@ -190,7 +190,8 @@
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
-        <button id="btn-ruhe-nacht" class="btn-sub" style="display:none; background:var(--warn) !important;" onclick="toggleStatus('ruhe-nacht')">Ruhe aus Nacht</button>
+        <button id="btn-ruhe-nacht" class="btn-sub" style="display:none; background:var(--warn) !important;" onclick="toggleStatus('ruhe-nacht')">Ruhe nach Nacht</button>
+        <button id="btn-krank-nacht" class="btn-sub" style="display:none; background:var(--danger) !important;" onclick="toggleStatus('krank-nacht')">Krank nach Nacht</button>
         <button id="btn-ruhe-krank" class="btn-sub" style="display:none; background:var(--warn) !important;" onclick="toggleStatus('ruhe-krank')">Ruhe nach krank</button>
         <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
     </div>
@@ -199,8 +200,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 2.5<br>
-    Stand: 09.02.2026, 14:30 Uhr
+    Aktuelle Versionsnummer 2.6<br>
+    Stand: 09.02.2026, 18:45 Uhr
 </div>
 
 <script>
@@ -364,7 +365,7 @@
                    (new Date(r.d).getTime() + 86400000 === new Date(date).getTime() && tEnd <= tStart && tEnd > 0);
         });
         const normalBtns = ['btn-krank', 'btn-ruhe'];
-        const contextBtns = ['btn-ruhe-nacht', 'btn-ruhe-krank'];
+        const contextBtns = ['btn-ruhe-nacht', 'btn-krank-nacht', 'btn-ruhe-krank'];
         if(hasNightEnd) {
             normalBtns.forEach(id => document.getElementById(id).style.display = 'none');
             contextBtns.forEach(id => document.getElementById(id).style.display = 'block');
@@ -382,36 +383,40 @@
     
     function toggleStatus(st) { 
         let displayStatus = st.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        if(st === 'ruhe-nacht') displayStatus = 'Ruhe Nach Nacht';
+        if(st === 'krank-nacht') displayStatus = 'Krank Nach Nacht';
+        
         activeStatus = activeStatus === displayStatus ? 'Dienst' : displayStatus; 
-        ['bereit','ruhe','urlaub','krank','dispo','schulung','ruhe-nacht','ruhe-krank'].forEach(b => {
+        ['bereit','ruhe','urlaub','krank','dispo','schulung','ruhe-nacht','krank-nacht','ruhe-krank'].forEach(b => {
             const btn = document.getElementById('btn-'+b);
             if(btn) {
                 let bStatus = b.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                if(b === 'ruhe-nacht') bStatus = 'Ruhe Nach Nacht';
+                if(b === 'krank-nacht') bStatus = 'Krank Nach Nacht';
                 btn.classList.toggle('active', activeStatus === bStatus);
             }
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
         
-        const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
+        const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Ruhe', 'Schulung'].includes(activeStatus);
         
         document.getElementById('date-range-box').style.display = (isAllDayOff || activeStatus === 'Krank') && !isTimedOff ? 'grid' : 'none';
         
-        // FAE und Ort nur für relevante Status anzeigen
-        const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
+        const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht', 'Ruhe Nach Krank'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
 
-        if(isTimedOff) document.getElementById('e').value = '23:59';
+        if(isTimedOff && !document.getElementById('e').value) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
 
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
-        if(['dienst','krank','bereit','dispo','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)) {
+        if(['dienst','krank','bereit','dispo','ruhe nach nacht','krank nach nacht','ruhe nach krank'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
-            if(statusCheck === 'krank' && (t1 === null || t2 === null)) {
+            if((statusCheck === 'krank' || statusCheck === 'krank nach nacht') && (t1 === null || t2 === null)) {
                 r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
             }
             if(t1===null || t2===null) return r;
@@ -426,18 +431,21 @@
                     if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                 }
             }
-            r.h=w; r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-            r.bonus=(!['krank','ruhe aus nacht','ruhe nach krank'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
+            if(statusCheck === 'krank nach nacht') r.h = config.gutschrift; else r.h=w;
+            if(statusCheck === 'ruhe nach nacht' || statusCheck === 'ruhe nach krank') r.h = 0;
+            
+            r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
+            r.bonus=(!['krank','krank nach nacht','ruhe nach nacht','ruhe nach krank'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
             let abw = 0;
-            if (r.tr && !['krank','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)) { 
+            if (r.tr && !['krank','krank nach nacht','ruhe nach nacht','ruhe nach krank'].includes(statusCheck)) { 
                 let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
                 let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
                 let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
                 if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
                 abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
             }
-            r.spesen = ['krank','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
-            r.fae = (r.tr && !['krank','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','ruhe aus nacht','ruhe nach krank'].includes(statusCheck)) ? 1 : 0;
+            r.spesen = ['krank','krank nach nacht','ruhe nach nacht','ruhe nach krank'].includes(statusCheck)?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
+            r.fae = (r.tr && !['krank','krank nach nacht','ruhe nach nacht','ruhe nach krank'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','krank nach nacht','ruhe nach nacht','ruhe nach krank'].includes(statusCheck)) ? 1 : 0;
         } else if(statusCheck==='urlaub' || statusCheck==='schulung' || statusCheck==='ruhe') { r.h=statusCheck==='ruhe'?0:config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
         return r;
@@ -526,7 +534,7 @@
             mG.items.push(r);
             let st = r.status.toLowerCase();
             if(!isFuture) {
-                if(st === 'krank' || st === 'ruhe nach krank') yS.krank++;
+                if(st.includes('krank')) yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
@@ -576,8 +584,7 @@
                             else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
                             const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
                             
-                            // Symbole nur für relevante Status anzeigen
-                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe aus nacht', 'ruhe nach krank'].includes(stLower);
+                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht', 'ruhe nach krank'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
 
@@ -603,7 +610,7 @@
         document.getElementById('s').value=r.s||''; document.getElementById('e').value=r.e||''; document.getElementById('ev').value=r.ev||''; document.getElementById('eb').value=r.eb||''; 
         document.getElementById('p1s').value=r.p1s||''; document.getElementById('pd1').value=r.pd1||0; document.getElementById('p2s').value=r.p2s||''; document.getElementById('pd2').value=r.pd2||0; 
         document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=!!r.tr; document.getElementById('korrHin').value=r.korrHin||''; document.getElementById('korrRueck').value=r.korrRueck||''; 
-        document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase().replace(' ', '-')); window.scrollTo(0,0); 
+        document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase().replace(/ /g, '-')); window.scrollTo(0,0); 
     }
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
@@ -621,7 +628,7 @@
         const filterLimit = new Date(); filterLimit.setDate(filterLimit.getDate() - 7); filterLimit.setHours(0,0,0,0);
         data.filter(r => new Date(r.d) >= filterLimit).forEach(shift => {
             const statusFormatted = shift.status.charAt(0).toUpperCase() + shift.status.slice(1);
-            const isTimedOff = ['Ruhe Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
+            const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
             let summary, startStr, endStr;
             if (isAllDay) {
