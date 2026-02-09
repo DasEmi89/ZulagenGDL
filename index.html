@@ -109,6 +109,17 @@
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
     <div class="grid"><div><label>FAE €/Tag</label><input type="number" id="cfg-fahrt" step="0.01"></div><div><label>Urlaub h/Tag</label><input type="number" id="cfg-gutschrift" step="0.01"></div></div>
     <hr>
+    
+    <button onclick="toggleTaxSettings()" style="background:#475569; margin-top:0px; margin-bottom: 15px;">📊 STEUERN & NETTO-CHECK</button>
+    
+    <div id="tax-settings" style="display:none; background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+        <label style="display: block; margin-bottom: 10px; color: var(--p);">Netto-Vorschau Parameter</label>
+        <div class="grid"><div><label>Brutto Monat</label><input type="number" id="cfg-brutto" step="0.01"></div><div><label>Steuerklasse</label><input type="number" id="cfg-stkl"></div></div>
+        <div class="grid"><div><label>Bundesland</label><input type="text" id="cfg-bland"></div><div><label>Zusatzbeitrag %</label><input type="number" id="cfg-kk" step="0.01"></div></div>
+        <div class="grid"><div><label>Kinder Anzahl</label><input type="number" id="cfg-kindAnzahl"></div><div><label>Alter Kind 1</label><input type="number" id="cfg-kindAlter"></div></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><input type="checkbox" id="cfg-kirche" style="width:20px; height:20px;"> <label>Kirchensteuer</label></div>
+    </div>
+
     <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
@@ -190,8 +201,8 @@
         <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
         <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
         <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
-        <button id="btn-ruhe-nacht" class="btn-sub" style="background:var(--warn) !important;" onclick="toggleStatus('ruhe-nacht')">Ruhe Nach Nacht</button>
-        <button id="btn-krank-nacht" class="btn-sub" style="background:var(--danger) !important;" onclick="toggleStatus('krank-nacht')">Krank Nach Nacht</button>
+        <button id="btn-ruhe-nacht" class="btn-sub" onclick="toggleStatus('ruhe-nacht')">Ruhe Nach Nacht</button>
+        <button id="btn-krank-nacht" class="btn-sub" onclick="toggleStatus('krank-nacht')">Krank Nach Nacht</button>
         <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
     </div>
 </div>
@@ -199,8 +210,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2<br>
-    Stand: 09.02.2026, 21:15 Uhr
+    Aktuelle Versionsnummer 3.4<br>
+    Stand: 09.02.2026, 22:15 Uhr
 </div>
 
 <script>
@@ -215,7 +226,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, brutto: 3732.86, stkl: 4, kirche: false, bland: "Berlin", kk: 1.7, kindAnzahl: 1, kindAlter: 2};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -223,6 +234,11 @@
     let activeStatus = 'Dienst';
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
+
+    function toggleTaxSettings() {
+        const ts = document.getElementById('tax-settings');
+        ts.style.display = ts.style.display === 'block' ? 'none' : 'block';
+    }
 
     function checkNightShift() {
         const d_start = document.getElementById('d').value;
@@ -331,7 +347,7 @@
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
+    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.none = 'none'; document.getElementById('refresh-dialog').style.display = 'none'; }
     function recalculateFromDate() {
         const startD = document.getElementById('refresh-date').value; if(!startD) return;
         data = data.map(r => r.d >= startD ? calculateShift(r) : r);
@@ -339,10 +355,20 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') {
+            ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','brutto','stkl','bland','kk','kindAnzahl','kindAlter'].forEach(k => {
+                const el = document.getElementById('cfg-'+k);
+                if(el) el.value = config[k] || (k === 'bland' ? '' : 0);
+            });
+            document.getElementById('cfg-kirche').checked = config.kirche || false;
+        }
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','brutto','stkl','bland','kk','kindAnzahl','kindAlter'].forEach(k => { 
+            const el = document.getElementById('cfg-'+k);
+            if(el) config[k] = (k === 'bland') ? el.value : (parseFloat(el.value) || 0); 
+        });
+        config.kirche = document.getElementById('cfg-kirche').checked;
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
     
@@ -357,11 +383,9 @@
     }
 
     function checkContextButtons(date) {
-        const normalBtns = ['btn-krank', 'btn-ruhe'];
-        const contextBtns = ['btn-ruhe-nacht', 'btn-krank-nacht'];
-        
-        normalBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
-        contextBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
+        // Buttons sind nun dauerhaft sichtbar und farblich an das Grauschema angepasst
+        const btns = ['btn-krank', 'btn-ruhe', 'btn-ruhe-nacht', 'btn-krank-nacht'];
+        btns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
     }
 
     function setDispoTime(start, end) {
@@ -547,7 +571,10 @@
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE;
+                // Netto-Logik basierend auf deinen Steuer-Parametern (Klasse 4, Berlin, 1 Kind)
+                // Faktor 0.47 für steuerpflichtige Teile (Samstag, Bonus)
+                const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.47);
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
@@ -651,7 +678,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.2) bereit!");
+        showToast("iCal (V3.4) bereit!");
     }
 </script>
 </body>
