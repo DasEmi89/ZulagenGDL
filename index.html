@@ -210,8 +210,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.4<br>
-    Stand: 09.02.2026, 22:15 Uhr
+    Aktuelle Versionsnummer 3.5<br>
+    Stand: 09.02.2026, 22:30 Uhr
 </div>
 
 <script>
@@ -226,7 +226,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, brutto: 3732.86, stkl: 4, kirche: false, bland: "Berlin", kk: 1.7, kindAnzahl: 1, kindAlter: 2};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, brutto: 3732.86, stkl: 4, kirche: false, bland: "Berlin", kk: 1.65, kindAnzahl: 1, kindAlter: 2};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -347,7 +347,7 @@
 
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.none = 'none'; document.getElementById('refresh-dialog').style.display = 'none'; }
+    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
     function recalculateFromDate() {
         const startD = document.getElementById('refresh-date').value; if(!startD) return;
         data = data.map(r => r.d >= startD ? calculateShift(r) : r);
@@ -383,7 +383,6 @@
     }
 
     function checkContextButtons(date) {
-        // Buttons sind nun dauerhaft sichtbar und farblich an das Grauschema angepasst
         const btns = ['btn-krank', 'btn-ruhe', 'btn-ruhe-nacht', 'btn-krank-nacht'];
         btns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
     }
@@ -401,26 +400,20 @@
             'krank-nacht': 'Krank Nach Nacht'
         };
         activeStatus = displayNames[st] || 'Dienst'; 
-
         const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank', 'Schulung'].includes(activeStatus);
-        
         const showTimes = !isAllDayOff || isTimedOff;
         document.getElementById('time-grid').style.display = showTimes ? 'grid' : 'none';
-
         Object.keys(displayNames).forEach(b => {
             const btn = document.getElementById('btn-'+b);
             if(btn) btn.classList.toggle('active', activeStatus === displayNames[b]);
         }); 
-
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
         document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
-        
         const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
-
         if(isTimedOff && !document.getElementById('e').value) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
@@ -446,7 +439,6 @@
             }
             if(statusCheck === 'krank nach nacht') r.h = config.gutschrift; else r.h=w;
             if(statusCheck === 'ruhe nach nacht') r.h = 0;
-            
             r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
             r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
             let abw = 0;
@@ -483,13 +475,11 @@
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         let lastId = null;
         let hasConflict = false;
-        
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
             let formattedStatus = activeStatus;
             let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:formattedStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
-            
             const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
             if (overwriteStatuses.includes(formattedStatus)) {
                 data = data.filter(x => x.d !== currentD || (id && x.id === parseInt(id)));
@@ -500,7 +490,6 @@
                     break;
                 }
             }
-            
             if(id) { r.isEdited = true; data=data.filter(x=>x.id!==parseInt(id)); }
             r=calculateShift(r); data.push(r); lastId = r.id;
             loopStart.setDate(loopStart.getDate() + 1);
@@ -564,6 +553,10 @@
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
+
+        // Basis-Netto Berechnung für Gesamt-Anzeige
+        const bNet = config.brutto * 0.627; // Approximation für Stkl 4, Berlin, 1 Kind (Abzug ca. 37.3%)
+
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
@@ -572,9 +565,8 @@
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
                 const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE;
-                // Netto-Logik basierend auf deinen Steuer-Parametern (Klasse 4, Berlin, 1 Kind)
-                // Faktor 0.47 für steuerpflichtige Teile (Samstag, Bonus)
                 const nV = (nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.47);
+                const nTotal = bNet + nV;
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
@@ -585,7 +577,7 @@
                             <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                             <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
-                        </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
+                        </div><div class="spesen-bar">Netto-Zulagen: ~ ${nV.toFixed(2)} € <span style="font-size: 0.7rem; color: #94a3b8; margin-left: 10px; font-weight: normal;">| Gesamt: ~ ${nTotal.toFixed(2)} €</span></div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                             const wd = wDaysShort[new Date(r.d).getDay()];
                             const isNight = r.d !== (r.d_end || r.d);
@@ -599,13 +591,10 @@
                             else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
                             else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
                             const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
-                            
                             const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
-
-                            let displayStatus = r.status;
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
             });
@@ -647,12 +636,8 @@
             const stL = shift.status.toLowerCase();
             const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
-            
             let icon = "🚄";
-            if (stL.includes("urlaub")) icon = "🏖️";
-            else if (stL.includes("krank")) icon = "🚑";
-            else if (stL.includes("ruhe")) icon = "🛌🏽";
-
+            if (stL.includes("urlaub")) icon = "🏖️"; else if (stL.includes("krank")) icon = "🚑"; else if (stL.includes("ruhe")) icon = "🛌🏽";
             let summary, startStr, endStr;
             if (isAllDay) {
                 summary = `${icon} ${statusFormatted} ${icon}`;
@@ -678,7 +663,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.4) bereit!");
+        showToast("iCal (V3.5) bereit!");
     }
 </script>
 </body>
