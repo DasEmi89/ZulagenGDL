@@ -109,17 +109,6 @@
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
     <div class="grid"><div><label>FAE €/Tag</label><input type="number" id="cfg-fahrt" step="0.01"></div><div><label>Urlaub h/Tag</label><input type="number" id="cfg-gutschrift" step="0.01"></div></div>
     <hr>
-    
-    <button onclick="toggleTaxSettings()" style="background:#475569; margin-top:0px; margin-bottom: 15px;">📊 STEUERN & NETTO-CHECK</button>
-    
-    <div id="tax-settings" style="display:none; background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
-        <label style="display: block; margin-bottom: 10px; color: var(--p);">Netto-Vorschau Parameter</label>
-        <div class="grid"><div><label>Brutto Monat</label><input type="number" id="cfg-brutto" step="0.01"></div><div><label>Steuerklasse</label><input type="number" id="cfg-stkl"></div></div>
-        <div class="grid"><div><label>Bundesland</label><input type="text" id="cfg-bland"></div><div><label>Zusatzbeitrag %</label><input type="number" id="cfg-kk" step="0.01"></div></div>
-        <div class="grid"><div><label>Kinder Anzahl</label><input type="number" id="cfg-kindAnzahl"></div><div><label>Alter Kind 1</label><input type="number" id="cfg-kindAlter"></div></div>
-        <div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><input type="checkbox" id="cfg-kirche" style="width:20px; height:20px;"> <label>Kirchensteuer</label></div>
-    </div>
-
     <div class="grid"><div><label>Wege Hin</label><input type="number" id="cfg-wegeHin"></div><div><label>Wege Rück</label><input type="number" id="cfg-wegeRueck"></div></div>
     <div class="grid"><div><label>8h Spesen</label><input type="number" id="cfg-v1" step="0.01"></div><div><label>14h Spesen</label><input type="number" id="cfg-v2" step="0.01"></div></div>
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
@@ -210,8 +199,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.7<br>
-    Stand: 09.02.2026, 22:50 Uhr
+    Aktuelle Versionsnummer 3.2<br>
+    Stand: 09.02.2026, 21:15 Uhr
 </div>
 
 <script>
@@ -226,7 +215,7 @@
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
-    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36, brutto: 3732.86, stkl: 4, kirche: false, bland: "Berlin", kk: 1.65, kindAnzahl: 1, kindAlter: 2};
+    let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
@@ -234,11 +223,7 @@
     let activeStatus = 'Dienst';
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
-    function toggleTaxSettings() { const ts = document.getElementById('tax-settings'); ts.style.display = ts.style.display === 'block' ? 'none' : 'block'; }
-    function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
-    function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
-    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
-    
+
     function checkNightShift() {
         const d_start = document.getElementById('d').value;
         const s = document.getElementById('s').value;
@@ -344,6 +329,9 @@
         }
     }
 
+    function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
+    function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
+    function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
     function recalculateFromDate() {
         const startD = document.getElementById('refresh-date').value; if(!startD) return;
         data = data.map(r => r.d >= startD ? calculateShift(r) : r);
@@ -351,20 +339,10 @@
     }
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') {
-            ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','brutto','stkl','bland','kk','kindAnzahl','kindAlter'].forEach(k => {
-                const el = document.getElementById('cfg-'+k);
-                if(el) el.value = config[k] || (k === 'bland' ? '' : 0);
-            });
-            document.getElementById('cfg-kirche').checked = config.kirche || false;
-        }
+        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
     }
     function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch','brutto','stkl','bland','kk','kindAnzahl','kindAlter'].forEach(k => { 
-            const el = document.getElementById('cfg-'+k);
-            if(el) config[k] = (k === 'bland') ? el.value : (parseFloat(el.value) || 0); 
-        });
-        config.kirche = document.getElementById('cfg-kirche').checked;
+        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => { config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0; });
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
     
@@ -379,8 +357,11 @@
     }
 
     function checkContextButtons(date) {
-        const btns = ['btn-krank', 'btn-ruhe', 'btn-ruhe-nacht', 'btn-krank-nacht'];
-        btns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
+        const normalBtns = ['btn-krank', 'btn-ruhe'];
+        const contextBtns = ['btn-ruhe-nacht', 'btn-krank-nacht'];
+        
+        normalBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
+        contextBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
     }
 
     function setDispoTime(start, end) {
@@ -396,20 +377,26 @@
             'krank-nacht': 'Krank Nach Nacht'
         };
         activeStatus = displayNames[st] || 'Dienst'; 
+
         const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank', 'Schulung'].includes(activeStatus);
+        
         const showTimes = !isAllDayOff || isTimedOff;
         document.getElementById('time-grid').style.display = showTimes ? 'grid' : 'none';
+
         Object.keys(displayNames).forEach(b => {
             const btn = document.getElementById('btn-'+b);
             if(btn) btn.classList.toggle('active', activeStatus === displayNames[b]);
         }); 
+
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
         document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
+        
         const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
+
         if(isTimedOff && !document.getElementById('e').value) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
     }
@@ -435,6 +422,7 @@
             }
             if(statusCheck === 'krank nach nacht') r.h = config.gutschrift; else r.h=w;
             if(statusCheck === 'ruhe nach nacht') r.h = 0;
+            
             r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
             r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
             let abw = 0;
@@ -471,11 +459,13 @@
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         let lastId = null;
         let hasConflict = false;
+        
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
             let formattedStatus = activeStatus;
             let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:formattedStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+            
             const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
             if (overwriteStatuses.includes(formattedStatus)) {
                 data = data.filter(x => x.d !== currentD || (id && x.id === parseInt(id)));
@@ -486,6 +476,7 @@
                     break;
                 }
             }
+            
             if(id) { r.isEdited = true; data=data.filter(x=>x.id!==parseInt(id)); }
             r=calculateShift(r); data.push(r); lastId = r.id;
             loopStart.setDate(loopStart.getDate() + 1);
@@ -523,13 +514,11 @@
         }
         let tH_total=0, tV_total=0, tN_total=0; 
         const tree = {};
-        
-        // Erster Durchgang: Daten laden und Netto-Zulagen-Paket berechnen
         data.forEach(r => {
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             const yearHolidays = getHolidays(parseInt(y));
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
-            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0, nV:0 };
+            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
             const yS = tree[y].stats, mG = tree[y].months[m];
             mG.items.push(r);
             let st = r.status.toLowerCase();
@@ -540,58 +529,56 @@
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
-                
-                // Netto-Zulagen-Paket für diesen Monat berechnen
-                const nE = Math.round(r.nH) * config.nacht;
-                mG.nV += (nE + r.soH*config.sonntag + r.ftH*config.feiertag + r.spesen + r.fae) + ((r.szH*config.samstag + r.bonus) * 0.47);
             }
         });
-
-        const bNet = config.brutto * 0.6276; // Basis Netto (Stkl 4, Berlin, Kind)
-
+        let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
+        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
+        const nSollH = (config.gutschrift * 60) / 5;
+        let roundedTotalN = 0;
+        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); }); } });
+        document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
+        document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             let focusHtml = ""; let otherHtml = ""; let otherCount = 0;
-            
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH);
-                
-                // Reine Brutto-Zulagen (ohne Spesen/FAE) für die Statusleiste
-                const nE = rNH * config.nacht;
-                const szE = mG.szH * config.samstag;
-                const soE = mG.soH * config.sonntag;
-                const ftE = mG.ftH * config.feiertag;
-                const bruttoZulagenRein = nE + szE + soE + ftE + mG.bE;
-
-                // RÜCKWIRKENDE LOGIK: Zulagen aus Vormonat für Gesamt-Netto
-                let prevMDate = new Date(parseInt(yr), parseInt(mo)-2, 1);
-                let prevMStr = prevMDate.toISOString().substring(0,7);
-                let prevYStr = prevMDate.getFullYear().toString();
-                let zulagenVormonat = 0;
-                let vormonatName = "Vormonat";
-                if(tree[prevYStr] && tree[prevYStr].months[prevMStr]) {
-                    zulagenVormonat = tree[prevYStr].months[prevMStr].nV;
-                    vormonatName = monthNames[prevMDate.getMonth()];
-                }
-                const nTotalAuszahlung = bNet + zulagenVormonat;
-                
-                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Zulagen: ${bruttoZulagenRein.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nacht-count"><span>Nächte:</span><span class="val-count">${mG.nCounts}x</span></div>
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                             <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
-                        </div><div class="spesen-bar">Netto-Zulagen (aktuell): ~ ${mG.nV.toFixed(2)} € <span style="font-size: 0.7rem; color: #94a3b8; margin-left: 10px; font-weight: normal;">| Gesamt-Netto Auszahlung: ~ ${nTotalAuszahlung.toFixed(2)} € (inkl. ${vormonatName})</span></div>
+                        </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
-                            const wd = wDaysShort[new Date(r.d).getDay()], isNight = r.d !== (r.d_end || r.d), isToday = r.d === todayStr, isFutureRow = r.d > todayStr;
-                            let typeClass = 'type-dienst', stL = r.status.toLowerCase();
-                            if(stL.includes('bereit')) typeClass = 'type-bereit'; else if(stL.includes('dispo')) typeClass = 'type-dispo'; else if(stL.includes('krank')) typeClass = 'type-krank'; else if(stL.includes('urlaub')) typeClass = 'type-urlaub'; else if(stL.includes('ruhe') || stL.includes('schulung')) typeClass = 'type-ruhe';
-                            return `<tr id="row-${r.id}" class="${(isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            const wd = wDaysShort[new Date(r.d).getDay()];
+                            const isNight = r.d !== (r.d_end || r.d);
+                            const isToday = r.d === todayStr;
+                            const isFutureRow = r.d > todayStr;
+                            let typeClass = 'type-dienst';
+                            let stLower = r.status.toLowerCase();
+                            if(stLower.includes('bereit')) typeClass = 'type-bereit';
+                            else if(stLower.includes('dispo')) typeClass = 'type-dispo';
+                            else if(stLower.includes('krank')) typeClass = 'type-krank';
+                            else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
+                            else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
+                            const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
+                            
+                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
+                            const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
+                            const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
+
+                            let displayStatus = r.status;
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
             });
@@ -633,8 +620,12 @@
             const stL = shift.status.toLowerCase();
             const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
+            
             let icon = "🚄";
-            if (stL.includes("urlaub")) icon = "🏖️"; else if (stL.includes("krank")) icon = "🚑"; else if (stL.includes("ruhe")) icon = "🛌🏽";
+            if (stL.includes("urlaub")) icon = "🏖️";
+            else if (stL.includes("krank")) icon = "🚑";
+            else if (stL.includes("ruhe")) icon = "🛌🏽";
+
             let summary, startStr, endStr;
             if (isAllDay) {
                 summary = `${icon} ${statusFormatted} ${icon}`;
@@ -660,7 +651,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.7) bereit!");
+        showToast("iCal (V3.2) bereit!");
     }
 </script>
 </body>
