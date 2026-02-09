@@ -210,8 +210,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.6<br>
-    Stand: 09.02.2026, 22:45 Uhr
+    Aktuelle Versionsnummer 3.7<br>
+    Stand: 09.02.2026, 22:50 Uhr
 </div>
 
 <script>
@@ -524,7 +524,7 @@
         let tH_total=0, tV_total=0, tN_total=0; 
         const tree = {};
         
-        // Erster Durchgang: Alle Daten in Tree laden und Brutto-Zulagen-Netto berechnen
+        // Erster Durchgang: Daten laden und Netto-Zulagen-Paket berechnen
         data.forEach(r => {
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             const yearHolidays = getHolidays(parseInt(y));
@@ -541,16 +541,13 @@
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
                 
-                // Monatliches Netto-Zulagen-Paket für diesen Monat berechnen (Topf für Folgemonat)
+                // Netto-Zulagen-Paket für diesen Monat berechnen
                 const nE = Math.round(r.nH) * config.nacht;
                 mG.nV += (nE + r.soH*config.sonntag + r.ftH*config.feiertag + r.spesen + r.fae) + ((r.szH*config.samstag + r.bonus) * 0.47);
             }
         });
 
-        let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
-        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
-        
-        const bNet = config.brutto * 0.627; // Basis Netto Approximation (Stkl 4, Berlin, Kind)
+        const bNet = config.brutto * 0.6276; // Basis Netto (Stkl 4, Berlin, Kind)
 
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
@@ -562,34 +559,38 @@
                 const isFocus = focusMonths.includes(m);
                 const rNH = Math.round(mG.nH);
                 
-                // RÜCKWIRKENDE LOGIK: Zulagen aus Vormonat holen
+                // Reine Brutto-Zulagen (ohne Spesen/FAE) für die Statusleiste
+                const nE = rNH * config.nacht;
+                const szE = mG.szH * config.samstag;
+                const soE = mG.soH * config.sonntag;
+                const ftE = mG.ftH * config.feiertag;
+                const bruttoZulagenRein = nE + szE + soE + ftE + mG.bE;
+
+                // RÜCKWIRKENDE LOGIK: Zulagen aus Vormonat für Gesamt-Netto
                 let prevMDate = new Date(parseInt(yr), parseInt(mo)-2, 1);
                 let prevMStr = prevMDate.toISOString().substring(0,7);
                 let prevYStr = prevMDate.getFullYear().toString();
                 let zulagenVormonat = 0;
                 let vormonatName = "Vormonat";
-                
                 if(tree[prevYStr] && tree[prevYStr].months[prevMStr]) {
                     zulagenVormonat = tree[prevYStr].months[prevMStr].nV;
                     vormonatName = monthNames[prevMDate.getMonth()];
                 }
+                const nTotalAuszahlung = bNet + zulagenVormonat;
                 
-                const nTotal = bNet + zulagenVormonat;
-                
-                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span></div></div><div class="month-content ${mOpen?'open':''}">
+                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Zulagen: ${bruttoZulagenRein.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${(rNH*config.nacht).toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${(mG.szH*config.samstag).toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${(mG.soH*config.sonntag).toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${(mG.ftH*config.feiertag).toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
-                        </div><div class="spesen-bar">Auszahlung (Zulagen ${vormonatName}): ~ ${zulagenVormonat.toFixed(2)} € <span style="font-size: 0.7rem; color: #94a3b8; margin-left: 10px; font-weight: normal;">| Gesamt-Netto ${monthNames[parseInt(mo)-1]}: ~ ${nTotal.toFixed(2)} €</span></div>
+                        </div><div class="spesen-bar">Netto-Zulagen (aktuell): ~ ${mG.nV.toFixed(2)} € <span style="font-size: 0.7rem; color: #94a3b8; margin-left: 10px; font-weight: normal;">| Gesamt-Netto Auszahlung: ~ ${nTotalAuszahlung.toFixed(2)} € (inkl. ${vormonatName})</span></div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                             const wd = wDaysShort[new Date(r.d).getDay()], isNight = r.d !== (r.d_end || r.d), isToday = r.d === todayStr, isFutureRow = r.d > todayStr;
                             let typeClass = 'type-dienst', stL = r.status.toLowerCase();
                             if(stL.includes('bereit')) typeClass = 'type-bereit'; else if(stL.includes('dispo')) typeClass = 'type-dispo'; else if(stL.includes('krank')) typeClass = 'type-krank'; else if(stL.includes('urlaub')) typeClass = 'type-urlaub'; else if(stL.includes('ruhe') || stL.includes('schulung')) typeClass = 'type-ruhe';
-                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stL);
                             return `<tr id="row-${r.id}" class="${(isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
@@ -659,7 +660,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.6) bereit!");
+        showToast("iCal (V3.7) bereit!");
     }
 </script>
 </body>
