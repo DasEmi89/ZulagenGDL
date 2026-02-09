@@ -199,8 +199,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 2.4<br>
-    Stand: 08.02.2026, 14:15 Uhr
+    Aktuelle Versionsnummer 2.5<br>
+    Stand: 09.02.2026, 14:30 Uhr
 </div>
 
 <script>
@@ -560,6 +560,7 @@
                             <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
                         </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                             const wd = wDaysShort[new Date(r.d).getDay()];
