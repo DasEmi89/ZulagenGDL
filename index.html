@@ -200,8 +200,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 2.6<br>
-    Stand: 09.02.2026, 18:45 Uhr
+    Aktuelle Versionsnummer 2.7<br>
+    Stand: 09.02.2026, 19:15 Uhr
 </div>
 
 <script>
@@ -628,17 +628,25 @@
         const filterLimit = new Date(); filterLimit.setDate(filterLimit.getDate() - 7); filterLimit.setHours(0,0,0,0);
         data.filter(r => new Date(r.d) >= filterLimit).forEach(shift => {
             const statusFormatted = shift.status.charAt(0).toUpperCase() + shift.status.slice(1);
+            const stL = shift.status.toLowerCase();
             const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht', 'Ruhe Nach Krank'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
+            
+            let icon = "🚄";
+            if (stL.includes("urlaub")) icon = "🏖️";
+            else if (stL.includes("krank")) icon = "🚑";
+            else if (stL.includes("ruhe")) icon = "🛌🏽";
+
             let summary, startStr, endStr;
             if (isAllDay) {
-                summary = statusFormatted;
+                summary = `${icon} ${statusFormatted} ${icon}`;
                 const d1 = shift.d.replace(/-/g, '');
                 let dEnd = new Date(shift.d); dEnd.setDate(dEnd.getDate() + 1);
                 const d2 = dEnd.toISOString().split('T')[0].replace(/-/g, '');
                 startStr = `DTSTART;VALUE=DATE:${d1}`; endStr = `DTEND;VALUE=DATE:${d2}`;
             } else {
-                summary = isTimedOff ? statusFormatted : `Dienst ${shift.s} - ${shift.e}`;
+                const titleText = isTimedOff ? statusFormatted : `Dienst ${shift.s} - ${shift.e}`;
+                summary = `${icon} ${titleText} ${icon}`;
                 const tStart = shift.d.replace(/-/g, '') + 'T' + shift.s.replace(':', '') + '00';
                 const tEnd = (shift.d_end || shift.d).replace(/-/g, '') + 'T' + shift.e.replace(':', '') + '00';
                 startStr = `DTSTART;TZID=Europe/Berlin:${tStart}`; endStr = `DTEND;TZID=Europe/Berlin:${tEnd}`;
@@ -654,7 +662,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (letzte 7 Tage + Zukunft) bereit!");
+        showToast("iCal (Icons inklusive) bereit!");
     }
 </script>
 </body>
