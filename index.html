@@ -659,7 +659,7 @@
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.53);
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
