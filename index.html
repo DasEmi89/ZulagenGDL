@@ -128,12 +128,73 @@
     <button onclick="toggleTaxPanel()" style="background:#64748b; margin-top:10px">ZURÜCK</button>
 </div>
 
+<div id="import-panel">
+    <h2 style="margin-top:0">Dienstplan hinzufügen</h2>
+    <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 10px;">Datei auswählen (.json)</label>
+        <input type="file" id="import-file" accept=".json" onchange="processFileImport(this)">
+    </div>
+    <textarea id="import-area" style="width:100%; height:250px; font-family:monospace; font-size:0.7rem; margin-bottom:15px;" placeholder='{"data":[...]}'></textarea>
+    <button onclick="processImport()" style="background:var(--success)">SCHICHTEN HINZUFÜGEN</button>
+    <button onclick="toggleImport()" style="background:#64748b; margin-top:10px">ABBRECHEN</button>
+</div>
+
+<div id="refresh-dialog" onclick="if(event.target===this) closeRefreshDialog()">
+    <div class="dialog-content">
+        <h3 style="margin-top:0">Tarif-Update</h3>
+        <p style="font-size: 0.8rem; color: #64748b;">Datum für Neuberechnung?</p>
+        <input type="date" id="refresh-date" style="margin-bottom:15px;">
+        <button onclick="recalculateFromDate()" style="background:var(--success)">NEU BERECHNEN</button>
+        <button onclick="closeRefreshDialog()" style="background:#64748b; margin-top:8px;">ABBRECHEN</button>
+    </div>
+</div>
+
+<div class="card" id="input-card">
+    <div id="btn-cancel-edit" class="btn-close-edit" onclick="cancelEdit()">×</div>
+    <div id="edit-id-view" style="display:none; color:var(--warn); font-weight:bold; margin-bottom:10px; text-align:center;">✎ BEARBEITEN AKTIV</div>
+    <input type="hidden" id="edit-id">
+    <div class="grid"><div><label>Datum (Von)</label><input type="date" id="d" onchange="autoDetectDay()"></div><div><label>Typ</label><div id="type-display" style="padding:12px; background:#f1f5f9; border-radius:10px; text-align:center; font-weight:bold; font-size:0.8rem;">WERKTAG</div></div></div>
+    <div id="date-range-box" class="grid" style="display:none;"><div><label>Datum (Bis)</label><input type="date" id="d_end"></div><div></div></div>
+    <div class="grid" id="time-grid"><div><label>Beginn</label><input type="time" id="s" onchange="checkNightShift()"></div><div><label>Ende</label><input type="time" id="e" onchange="checkNightShift()"></div></div>
+    <div id="dispo-presets" style="display:none; margin-bottom: 12px; gap: 8px; grid-template-columns: 1fr 1fr 1fr;" class="grid">
+        <button class="btn-sub" onclick="setDispoTime('04:00','12:00')">Früh</button>
+        <button class="btn-sub" onclick="setDispoTime('12:00','20:00')">Tag</button>
+        <button class="btn-sub" onclick="setDispoTime('20:00','04:00')">Nacht</button>
+    </div>
+    <div style="margin-bottom: 12px;"><label>Gutgeschriebene Stunden</label><input type="number" id="extra_h" step="0.01"></div>
+    <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
+        <div class="grid"><div><label>Einsatz Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
+    </div>
+    <div class="pause-box">
+        <div class="pause-row"><label>P1</label><input type="time" id="p1s"><select id="pd1"><option value="0">0</option><option value="30">30</option><option value="45">45</option><option value="60">60</option></select></div>
+        <div class="pause-row"><label>P2</label><input type="time" id="p2s"><select id="pd2"><option value="0">0</option><option value="15">15</option><option value="30">30</option></select></div>
+    </div>
+    <div class="grid" id="loc-section">
+        <div><label>Ort</label><select id="loc"><option value="BHF">BHF</option><option value="BRGB">BRGB</option></select></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+            <div><label>Korr. H</label><input type="number" id="korrHin"></div>
+            <div><label>Korr. R</label><input type="number" id="korrRueck"></div>
+        </div>
+    </div>
+    <div class="grid" style="align-items: center; justify-content: end;" id="fae-section">
+        <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="tr" checked style="width:22px; height:22px;"> FAE AKTIV</label>
+    </div>
+    <button id="main-btn" onclick="add()">Schicht speichern</button>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+        <button id="btn-bereit" class="btn-sub" onclick="toggleStatus('bereit')">Bereit</button>
+        <button id="btn-dispo" class="btn-sub" onclick="toggleStatus('dispo')">Dispo</button>
+        <button id="btn-urlaub" class="btn-sub" onclick="toggleStatus('urlaub')">Urlaub</button>
+        <button id="btn-krank" class="btn-sub" onclick="toggleStatus('krank')">Krank</button>
+        <button id="btn-ruhe" class="btn-sub" onclick="toggleStatus('ruhe')">Ruhe</button>
+        <button id="btn-ruhe-nacht" class="btn-sub" onclick="toggleStatus('ruhe-nacht')">Ruhe n. N.</button>
+        <button id="btn-krank-nacht" class="btn-sub" onclick="toggleStatus('krank-nacht')">Krank n. N.</button>
+        <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
+    </div>
+</div>
+
 <div id="history"></div>
 
-<div class="version-footer">
-    Aktuelle Versionsnummer 3.3<br>
-    Stand: 11.02.2026, 20:30 Uhr
-</div>
+<div class="version-footer">Version 3.4<br>Stand: 11.02.2026</div>
 
 <script>
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -142,7 +203,7 @@
     let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 3732.86, stkl: 4, kinder: 1, kk: 1.65, bland: 'Berlin', kirche: 0, corr: 0};
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
-    let openYears = new Set([new Date().getFullYear().toString()]);
+    let activeStatus = 'Dienst';
 
     function getHolidays(year) {
         const fixed = [`${year}-01-01`, `${year}-03-08`, `${year}-05-01`, `${year}-10-03`, `${year}-12-25`, `${year}-12-26`];
@@ -153,76 +214,60 @@
     }
 
     function calculateNet(brutto) {
-        let rv = 0.093, alv = 0.013, kv = 0.073 + (taxConfig.kk/200), pv = 0.023; // Vereinfacht für Berlin/Kind
-        let sv = brutto * (rv + alv + kv + pv);
-        let tax = brutto * 0.16; // Approximation Lohnsteuer Stkl 4
+        let sv = brutto * 0.205; // Approximation SV Beiträge
+        let tax = brutto * 0.16; // Approximation Steuer Stkl 4
         return brutto - sv - tax;
     }
 
-    function render() {
-        const cont = document.getElementById('history'); cont.innerHTML = '';
-        const todayStr = new Date().toISOString().split('T')[0];
-        const tree = {};
-        data.forEach(r => {
-            const y = r.d.substring(0,4), m = r.d.substring(0,7);
-            if(!tree[y]) tree[y] = { months: {} };
-            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, nV:0, nBrutto: 0 };
-            const mG = tree[y].months[m]; mG.items.push(r);
-            if(r.d <= todayStr) {
-                const nE = Math.round(r.nH) * config.nacht;
-                const szE = r.szH * config.samstag;
-                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae;
-                mG.nV += (nE + r.soH*config.sonntag + r.ftH*config.feiertag + r.spesen + r.fae) + ((szE + r.bonus) * 0.53);
-                mG.nBrutto += (nE + szE + r.soH*config.sonntag + r.ftH*config.feiertag + r.bonus);
+    function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
+    function autoDetectDay() { const d=document.getElementById('d').value; if(!d) return; const dt=new Date(d); let l='🏢 WERKTAG'; if(getHolidays(dt.getFullYear()).includes(d)) l='🚩 FEIERTAG'; else if(dt.getDay()===0) l='☀️ SONNTAG'; else if(dt.getDay()===6) l='📅 SAMSTAG'; document.getElementById('type-display').innerText=l; checkNightShift(); }
+    function checkNightShift() { const s=document.getElementById('s').value, e=document.getElementById('e').value, d=document.getElementById('d').value; if(!d) return; let de=d; if(s && e && timeToDec(e)<=timeToDec(s)){ let dt=new Date(d); dt.setDate(dt.getDate()+1); de=dt.toISOString().split('T')[0]; document.getElementById('date-range-box').style.display='grid'; } else { document.getElementById('date-range-box').style.display='none'; } document.getElementById('d_end').value=de; }
+
+    function toggleStatus(st) { 
+        let names={'bereit':'Bereit','dispo':'Dispo','urlaub':'Urlaub','krank':'Krank','ruhe':'Ruhe','schulung':'Schulung','ruhe-nacht':'Ruhe n. N.','krank-nacht':'Krank n. N.'};
+        activeStatus=names[st]||'Dienst'; 
+        Object.keys(names).forEach(k => document.getElementById('btn-'+k).classList.toggle('active', activeStatus===names[k]));
+        document.getElementById('bereitschaft-felder').style.display=(st==='bereit'?'block':'none');
+    }
+
+    function calculateShift(r) {
+        let st=r.status.toLowerCase(), hBase=0, n=0, sz=0, so=0, ft=0, b=0, sp=0, fa=0;
+        if(['dienst','bereit','dispo','ruhe n. n.','krank n. n.'].includes(st) && r.s && r.e) {
+            let t1=timeToDec(r.s), t2=timeToDec(r.e); if(t2<=t1)t2+=24;
+            for(let i=t1; i<t2; i+=1/60){
+                let c=i%24, dt=new Date(r.d); if(i>=24)dt.setDate(dt.getDate()+1);
+                let isF=getHolidays(dt.getFullYear()).includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
+                hBase+=1/60; if(c>=20||c<6)n+=1/60; if(isF)ft+=1/60; else if(isO)so+=1/60; else if(isA && c>=13 && c<20)sz+=1/60;
             }
+            if(st==='ruhe n. n.') hBase=0; b=((t1%24<4)||(t2%24<=4))?config.bonus:0;
+            let abw=(t2-t1)+(config.wegeHin+config.wegeRueck)/60; sp=abw>=24?config.v3:(abw>=14?config.v2:(abw>=8?config.v1:0)); fa=r.tr?config.fahrt:0;
+        } else if(['urlaub','schulung','krank'].includes(st)) hBase=config.gutschrift;
+        r.h=hBase+(parseFloat(r.extra_h)||0); r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft; r.bonus=b; r.spesen=sp; r.fae=fa; return r;
+    }
+
+    function add() {
+        let r={id:Date.now(), d:document.getElementById('d').value, d_end:document.getElementById('d_end').value, status:activeStatus, s:document.getElementById('s').value, e:document.getElementById('e').value, extra_h:document.getElementById('extra_h').value, tr:document.getElementById('tr').checked, loc:document.getElementById('loc').value, ev:document.getElementById('ev').value, eb:document.getElementById('eb').value};
+        data.push(calculateShift(r)); localStorage.setItem('shifts_p10', JSON.stringify(data)); render();
+    }
+
+    function render() {
+        const cont=document.getElementById('history'); cont.innerHTML='';
+        const todayStr=new Date().toISOString().split('T')[0], tree={}, basisNet=calculateNet(taxConfig.brutto);
+        data.forEach(r => { const m=r.d.substring(0,7); if(!tree[m])tree[m]={items:[], h:0, nV:0, br:0}; tree[m].items.push(r); if(r.d<=todayStr){ const nE=Math.round(r.nH)*config.nacht, szE=r.szH*config.samstag; tree[m].h+=r.h; tree[m].nV+=(nE+r.soH*config.sonntag+r.ftH*config.feiertag+r.spesen+r.fae)+((szE+r.bonus)*0.53); tree[m].br+=(nE+szE+r.soH*config.sonntag+r.ftH*config.feiertag+r.bonus); } });
+        Object.keys(tree).sort().reverse().forEach(m => {
+            const mG=tree[m], [yr,mo]=m.split('-'), prevM=new Date(yr,mo-2,1).toISOString().substring(0,7);
+            const totalNet=basisNet+(tree[prevM]?tree[prevM].nV:0)+(parseFloat(taxConfig.corr)||0);
+            cont.innerHTML += `<div class="year-group"><div class="month-header" onclick="this.nextElementSibling.classList.toggle('open')"><span>${monthNames[mo-1]} ${yr} (${mG.h.toFixed(1)}h)</span><span>Zulagen: ${mG.br.toFixed(2)}€</span></div><div class="month-content">
+                <div class="month-details-bar"><div class="detail-row"><span>Zulagen Netto akt.:</span><span>${mG.nV.toFixed(2)}€</span></div><div class="detail-row"><span>Gesamt-Netto:</span><span style="color:#4ade80">${totalNet.toFixed(2)}€</span></div></div>
+                <table>${mG.items.map(i=>`<tr><td>${i.d}</td><td>${i.status}</td><td>${i.h.toFixed(1)}h</td></tr>`).join('')}</table></div></div>`;
         });
-
-        const basisNet = calculateNet(taxConfig.brutto);
-
-        Object.keys(tree).sort().reverse().forEach(y => {
-            Object.keys(tree[y].months).sort().reverse().forEach(m => {
-                const mG = tree[y].months[m], [yr, mo] = m.split('-');
-                const mOpen = openMonths.has(m);
-                let prevM = new Date(yr, mo-2, 1).toISOString().substring(0,7);
-                let prevY = prevM.substring(0,4);
-                let zulVormonat = (tree[prevY] && tree[prevY].months[prevM]) ? tree[prevY].months[prevM].nV : 0;
-                const totalNet = basisNet + zulVormonat + (parseFloat(taxConfig.corr) || 0);
-
-                cont.innerHTML += `<div class="year-group">
-                    <div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')">
-                        <span>${monthNames[mo-1]} ${yr} <b>(${mG.h.toFixed(1)}h)</b></span>
-                        <div class="m-stats"><span>Zulagen: ${mG.nBrutto.toFixed(2)}€</span></div>
-                    </div>
-                    <div class="month-content ${mOpen?'open':''}">
-                        <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu Netto:</span><span>${(Math.round(mG.nH)*config.nacht).toFixed(2)}€</span></div>
-                            <div class="detail-row row-sozu"><span>SoZu Netto:</span><span>${(mG.soH*config.sonntag).toFixed(2)}€</span></div>
-                            <div class="detail-row row-sazu"><span>SaZu Brutto:</span><span>${(mG.szH*config.samstag).toFixed(2)}€</span></div>
-                            <div class="detail-row row-brgb"><span>Spesen:</span><span>${mG.sp.toFixed(2)}€</span></div>
-                        </div>
-                        <div class="spesen-bar" style="color:#fff; background:#1e293b">Netto-Zulagen aktuell: ~ ${mG.nV.toFixed(2)} €</div>
-                        <div class="spesen-bar" style="background:#111827; border-top:1px solid #334155">Gesamt-Netto (Auszahlung): <span style="color:#4ade80">${totalNet.toFixed(2)} €</span></div>
-                    </div>
-                </div>`;
-            });
-        });
+        const tH=data.filter(r=>r.d.startsWith('2026')).reduce((a,b)=>a+b.h,0); document.getElementById('h_sum').innerText=tH.toFixed(2);
     }
 
-    function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
-    function toggleTaxPanel() { const p = document.getElementById('tax-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
-    function saveTaxSettings() {
-        ['brutto','stkl','kinder','kk','kirche','corr'].forEach(k => taxConfig[k] = parseFloat(document.getElementById('tax-'+k).value) || 0);
-        taxConfig.bland = document.getElementById('tax-bland').value;
-        localStorage.setItem('shifts_tax_cfg', JSON.stringify(taxConfig)); toggleTaxPanel(); render();
-    }
-    function toggleConfig() { 
-        const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
-    }
-    function saveConfig() {
-        ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => config[k] = parseFloat(document.getElementById('cfg-'+k).value) || 0);
-        localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
-    }
+    function toggleConfig(){ const p=document.getElementById('config-panel'); p.style.display=p.style.display==='block'?'none':'block'; }
+    function toggleTaxPanel(){ const p=document.getElementById('tax-panel'); p.style.display=p.style.display==='block'?'none':'block'; }
+    function saveConfig(){ localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render(); }
+    function saveTaxSettings(){ localStorage.setItem('shifts_tax_cfg', JSON.stringify(taxConfig)); toggleTaxPanel(); render(); }
     render();
 </script>
 </body>
