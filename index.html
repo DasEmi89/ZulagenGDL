@@ -150,7 +150,7 @@
         </div>
         <div><label>Kirchensteuer</label>
             <select id="tax-kirche">
-                <option value="0">0</option>
+                <option value="0">Nein</option>
                 <option value="8">8%</option>
                 <option value="9">9%</option>
             </select>
@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.5<br>
-    Stand: 11.02.2026, 21:00 Uhr
+    Aktuelle Versionsnummer 3.2.2<br>
+    Stand: 11.02.2026, 14:40 Uhr
 </div>
 
 <script>
@@ -266,21 +266,14 @@
     
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
     
-    let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 3732.86, stkl: 4, kinder: 1, kk: 1.65, bland: 'Berlin', kirche: 0, rentner: 0};
+    // Steuer-Konfiguration initialisieren
+    let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 0, stkl: 1, kinder: 0, kk: 1.6, bland: 'Berlin', kirche: 0, rentner: 0};
 
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     let openMonths = new Set([new Date().toISOString().substring(0,7)]);
     let openYears = new Set([new Date().getFullYear().toString()]);
     let openOthers = new Set();
     let activeStatus = 'Dienst';
-
-    function calculateNet(brutto) {
-        if(!brutto) return 0;
-        let rv = 0.093, alv = 0.013, kv = 0.073 + (taxConfig.kk/200), pv = 0.023;
-        let sv = brutto * (rv + alv + kv + pv);
-        let tax = brutto * 0.16;
-        return brutto - sv - tax;
-    }
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
@@ -410,6 +403,7 @@
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
 
+    // Steuerung Steuer-Panel
     function toggleTaxPanel() {
         const p = document.getElementById('tax-panel');
         p.style.display = (p.style.display === 'block') ? 'none' : 'block';
@@ -436,7 +430,6 @@
         };
         localStorage.setItem('shifts_tax_cfg', JSON.stringify(taxConfig));
         toggleTaxPanel();
-        render();
         showToast("Steuer-Daten gespeichert!");
     }
     
@@ -637,7 +630,7 @@
             const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
             const yearHolidays = getHolidays(parseInt(y));
             if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
-            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0, nV: 0 };
+            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
             const yS = tree[y].stats, mG = tree[y].months[m];
             mG.items.push(r);
             let st = r.status.toLowerCase();
@@ -648,14 +641,8 @@
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
-
-                let nE = Math.round(r.nH) * config.nacht, szE = r.szH * config.samstag, soE = r.soH * config.sonntag, ftE = r.ftH * config.feiertag;
-                mG.nV += (nE + soE + ftE + r.spesen + r.fae) + ((szE + r.bonus) * 0.53);
             }
         });
-
-        const basisNet = calculateNet(taxConfig.brutto);
-
         let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
@@ -672,28 +659,18 @@
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                
-                let prevMDate = new Date(yr, parseInt(mo)-2, 1);
-                let prevM = prevMDate.toISOString().substring(0,7);
-                let prevY = prevM.substring(0,4);
-                let zulVormonat = (tree[prevY] && tree[prevY].months[prevM]) ? tree[prevY].months[prevM].nV : 0;
-                const totalNet = basisNet + zulVormonat;
-
-                const nE = Math.round(mG.nH) * config.nacht, szE = mG.szH * config.samstag, soE = mG.soH * config.sonntag, ftE = mG.ftH * config.feiertag;
-                const brutto = nE + szE + soE + ftE + mG.bE;
-
-                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul. Brutto: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu Brutto:</span><span><span class="val-h">${Math.round(mG.nH)}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-sazu"><span>SaZu Brutto:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
                             <div class="detail-row row-nacht-count"><span>Nächte:</span><span class="val-count">${mG.nCounts}x</span></div>
-                            <div class="detail-row row-sozu"><span>SoZu Brutto:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-fezu"><span>FeZu Brutto:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-4uhr"><span>4 Uhr Brutto:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
                             <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
-                        </div>
-                        <div class="spesen-bar" style="background:#111827; color:#4ade80">Gesamt-Netto (Auszahlung): ${totalNet.toFixed(2)} €</div>
+                        </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
                         <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
                             const wd = wDaysShort[new Date(r.d).getDay()];
                             const isNight = r.d !== (r.d_end || r.d);
@@ -787,7 +764,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.5) bereit!");
+        showToast("iCal (V3.2.2) bereit!");
     }
 </script>
 </body>
