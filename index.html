@@ -162,6 +162,11 @@
         <button class="btn-sub" onclick="setDispoTime('20:00','04:00')">Nacht (20-4)</button>
     </div>
 
+    <div style="margin-bottom: 12px;">
+        <label>Gutgeschriebene Stunden (Bonus)</label>
+        <input type="number" id="extra_h" step="0.01" placeholder="z.B. 4.0">
+    </div>
+
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
         <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
@@ -199,8 +204,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2<br>
-    Stand: 09.02.2026, 21:15 Uhr
+    Aktuelle Versionsnummer 3.2.1<br>
+    Stand: 11.02.2026, 11:45 Uhr
 </div>
 
 <script>
@@ -403,40 +408,47 @@
 
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
+        let baseH = 0;
         if(['dienst','krank','bereit','dispo','ruhe nach nacht','krank nach nacht'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
             if((statusCheck === 'krank' || statusCheck === 'krank nach nacht') && (t1 === null || t2 === null)) {
-                r.h = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; return r;
-            }
-            if(t1===null || t2===null) return r;
-            if(t2<=t1) t2+=24;
-            let n=0, sz=0, so=0, ft=0, w=0;
-            let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
-            for(let i=t1; i<t2; i+=(1/60)) {
-                if(!p.some(pa => i>=pa.s && i<pa.e)) {
-                    w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
-                    const loopHolidays = getHolidays(dt.getFullYear());
-                    let isF=loopHolidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
-                    if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
+                baseH = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
+            } else if (t1 !== null && t2 !== null) {
+                if(t2<=t1) t2+=24;
+                let n=0, sz=0, so=0, ft=0, w=0;
+                let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
+                for(let i=t1; i<t2; i+=(1/60)) {
+                    if(!p.some(pa => i>=pa.s && i<pa.e)) {
+                        w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
+                        const loopHolidays = getHolidays(dt.getFullYear());
+                        let isF=loopHolidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
+                        if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
+                    }
                 }
+                if(statusCheck === 'krank nach nacht') baseH = config.gutschrift; else baseH=w;
+                if(statusCheck === 'ruhe nach nacht') baseH = 0;
+                
+                r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
+                r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
+                let abw = 0;
+                if (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) { 
+                    let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
+                    let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
+                    let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
+                    if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
+                    abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
+                }
+                r.spesen = ['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
+                r.fae = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? 1 : 0;
             }
-            if(statusCheck === 'krank nach nacht') r.h = config.gutschrift; else r.h=w;
-            if(statusCheck === 'ruhe nach nacht') r.h = 0;
-            
-            r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-            r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
-            let abw = 0;
-            if (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) { 
-                let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
-                let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
-                let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
-                if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
-                abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
-            }
-            r.spesen = ['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
-            r.fae = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? 1 : 0;
-        } else if(statusCheck==='urlaub' || statusCheck==='schulung' || statusCheck==='ruhe') { r.h=statusCheck==='ruhe'?0:config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
-        else { r.h=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; }
+        } else if(statusCheck==='urlaub' || statusCheck==='schulung' || statusCheck==='ruhe') { 
+            baseH=statusCheck==='ruhe'?0:config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
+        } else { 
+            baseH=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
+        }
+        
+        // Add extra_h to the calculated base hours
+        r.h = baseH + (parseFloat(r.extra_h) || 0);
         return r;
     }
 
@@ -455,6 +467,7 @@
         const d_start=document.getElementById('d').value; if(!d_start) return;
         const d_end_in=document.getElementById('d_end').value;
         const id=document.getElementById('edit-id').value;
+        const extraHValue = document.getElementById('extra_h').value;
         let loopStart = new Date(d_start);
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         let lastId = null;
@@ -464,7 +477,25 @@
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
             let formattedStatus = activeStatus;
-            let r={ d: currentD, d_end: document.getElementById('d_end').value || currentD, status:formattedStatus, id:newId, s:document.getElementById('s').value, e:document.getElementById('e').value, p1s:document.getElementById('p1s').value, pd1:parseInt(document.getElementById('pd1').value), p2s:document.getElementById('p2s').value, pd2:parseInt(document.getElementById('pd2').value), ev:document.getElementById('ev').value, eb:document.getElementById('eb').value, loc:document.getElementById('loc').value, tr:document.getElementById('tr').checked, korrHin:document.getElementById('korrHin').value, korrRueck:document.getElementById('korrRueck').value };
+            let r={ 
+                d: currentD, 
+                d_end: document.getElementById('d_end').value || currentD, 
+                status:formattedStatus, 
+                id:newId, 
+                s:document.getElementById('s').value, 
+                e:document.getElementById('e').value, 
+                p1s:document.getElementById('p1s').value, 
+                pd1:parseInt(document.getElementById('pd1').value), 
+                p2s:document.getElementById('p2s').value, 
+                pd2:parseInt(document.getElementById('pd2').value), 
+                ev:document.getElementById('ev').value, 
+                eb:document.getElementById('eb').value, 
+                loc:document.getElementById('loc').value, 
+                tr:document.getElementById('tr').checked, 
+                korrHin:document.getElementById('korrHin').value, 
+                korrRueck:document.getElementById('korrRueck').value,
+                extra_h: extraHValue // Store the manual hours
+            };
             
             const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
             if (overwriteStatuses.includes(formattedStatus)) {
@@ -599,11 +630,12 @@
         document.getElementById('s').value=r.s||''; document.getElementById('e').value=r.e||''; document.getElementById('ev').value=r.ev||''; document.getElementById('eb').value=r.eb||''; 
         document.getElementById('p1s').value=r.p1s||''; document.getElementById('pd1').value=r.pd1||0; document.getElementById('p2s').value=r.p2s||''; document.getElementById('pd2').value=r.pd2||0; 
         document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=!!r.tr; document.getElementById('korrHin').value=r.korrHin||''; document.getElementById('korrRueck').value=r.korrRueck||''; 
+        document.getElementById('extra_h').value=r.extra_h||'';
         document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase().replace(/ /g, '-')); window.scrollTo(0,0); 
     }
     function cancelEdit() { 
         document.getElementById('edit-id').value=''; document.getElementById('edit-id-view').style.display='none'; document.getElementById('btn-cancel-edit').style.display='none'; 
-        ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck','d_end'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
+        ['s','e','p1s','p2s','ev','eb','korrHin','korrRueck','d_end','extra_h'].forEach(i=>document.getElementById(i).value=''); ['pd1','pd2'].forEach(i=>document.getElementById(i).value=0); 
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
 
@@ -651,7 +683,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.2) bereit!");
+        showToast("iCal (V3.2.1) bereit!");
     }
 </script>
 </body>
