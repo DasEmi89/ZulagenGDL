@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.2<br>
-    Stand: 11.02.2026, 14:40 Uhr
+    Aktuelle Versionsnummer 3.2.3<br>
+    Stand: 12.02.2026, 20:30 Uhr
 </div>
 
 <script>
@@ -266,7 +266,6 @@
     
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
     
-    // Steuer-Konfiguration initialisieren
     let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 0, stkl: 1, kinder: 0, kk: 1.6, bland: 'Berlin', kirche: 0, rentner: 0};
 
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
@@ -276,6 +275,17 @@
     let activeStatus = 'Dienst';
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
+
+    function updateDispoPresets() {
+        const s = document.getElementById('s').value;
+        const e = document.getElementById('e').value;
+        const buttons = document.querySelectorAll('#dispo-presets button');
+        if (buttons.length === 3) {
+            buttons[0].classList.toggle('active', s === '04:00' && e === '12:00');
+            buttons[1].classList.toggle('active', s === '12:00' && e === '20:00');
+            buttons[2].classList.toggle('active', s === '20:00' && e === '04:00');
+        }
+    }
 
     function checkNightShift() {
         const d_start = document.getElementById('d').value;
@@ -296,6 +306,7 @@
             }
         }
         document.getElementById('d_end').value = d_end;
+        updateDispoPresets();
     }
 
     async function exportData() {
@@ -403,7 +414,6 @@
         localStorage.setItem('shifts_cfg_v1', JSON.stringify(config)); toggleConfig(); render();
     }
 
-    // Steuerung Steuer-Panel
     function toggleTaxPanel() {
         const p = document.getElementById('tax-panel');
         p.style.display = (p.style.display === 'block') ? 'none' : 'block';
@@ -446,7 +456,6 @@
     function checkContextButtons(date) {
         const normalBtns = ['btn-krank', 'btn-ruhe'];
         const contextBtns = ['btn-ruhe-nacht', 'btn-krank-nacht'];
-        
         normalBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
         contextBtns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = 'block'; });
     }
@@ -455,6 +464,7 @@
         document.getElementById('s').value = start;
         document.getElementById('e').value = end;
         checkNightShift();
+        updateDispoPresets();
     }
     
     function toggleStatus(st) { 
@@ -464,28 +474,23 @@
             'krank-nacht': 'Krank Nach Nacht'
         };
         activeStatus = displayNames[st] || 'Dienst'; 
-
         const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank', 'Schulung'].includes(activeStatus);
-        
         const showTimes = !isAllDayOff || isTimedOff;
         document.getElementById('time-grid').style.display = showTimes ? 'grid' : 'none';
-
         Object.keys(displayNames).forEach(b => {
             const btn = document.getElementById('btn-'+b);
             if(btn) btn.classList.toggle('active', activeStatus === displayNames[b]);
         }); 
-
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
         document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
-        
         const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
-
         if(isTimedOff && !document.getElementById('e').value) document.getElementById('e').value = '23:59';
         if(!isAllDayOff && !isTimedOff) checkNightShift();
+        if(activeStatus === 'Dispo') updateDispoPresets();
     }
 
     function calculateShift(r) {
@@ -509,7 +514,6 @@
                 }
                 if(statusCheck === 'krank nach nacht') baseH = config.gutschrift; else baseH=w;
                 if(statusCheck === 'ruhe nach nacht') baseH = 0;
-                
                 r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
                 r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
                 let abw = 0;
@@ -528,7 +532,6 @@
         } else { 
             baseH=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
         }
-        
         r.h = baseH + (parseFloat(r.extra_h) || 0);
         return r;
     }
@@ -553,7 +556,6 @@
         let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
         let lastId = null;
         let hasConflict = false;
-        
         while(loopStart <= loopEnd) {
             const currentD = loopStart.toISOString().split('T')[0];
             let newId = id ? parseInt(id) : (Date.now() + Math.floor(Math.random() * 999999) + loopStart.getTime());
@@ -577,7 +579,6 @@
                 korrRueck:document.getElementById('korrRueck').value,
                 extra_h: extraHValue
             };
-            
             const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
             if (overwriteStatuses.includes(formattedStatus)) {
                 data = data.filter(x => x.d !== currentD || (id && x.id === parseInt(id)));
@@ -588,7 +589,6 @@
                     break;
                 }
             }
-            
             if(id) { r.isEdited = true; data=data.filter(x=>x.id!==parseInt(id)); }
             r=calculateShift(r); data.push(r); lastId = r.id;
             loopStart.setDate(loopStart.getDate() + 1);
@@ -659,7 +659,7 @@
             Object.keys(yData.months).sort().reverse().forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE + soE + ftE + mG.sp + mG.fE) + ((szE + mG.bE) * 0.53);
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
@@ -684,11 +684,9 @@
                             else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
                             else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
                             const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
-                            
                             const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
-
                             let displayStatus = r.status;
                             return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
@@ -747,7 +745,12 @@
                 const d2 = dEnd.toISOString().split('T')[0].replace(/-/g, '');
                 startStr = `DTSTART;VALUE=DATE:${d1}`; endStr = `DTEND;VALUE=DATE:${d2}`;
             } else {
-                const titleText = isTimedOff ? statusFormatted : `Dienst ${shift.s} - ${shift.e}`;
+                let label = "Dienst";
+                if (stL.includes("dispo")) label = "Dispo";
+                else if (stL.includes("schulung")) label = "Schulung";
+                else if (stL.includes("bereit")) label = "Bereitschaft";
+                
+                const titleText = isTimedOff ? statusFormatted : `${label} ${shift.s} - ${shift.e}`;
                 summary = `${icon} ${titleText} ${icon}`;
                 const tStart = shift.d.replace(/-/g, '') + 'T' + shift.s.replace(':', '') + '00';
                 const tEnd = (shift.d_end || shift.d).replace(/-/g, '') + 'T' + shift.e.replace(':', '') + '00';
@@ -764,7 +767,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
-        showToast("iCal (V3.2.2) bereit!");
+        showToast("iCal (V3.2.3) bereit!");
     }
 </script>
 </body>
