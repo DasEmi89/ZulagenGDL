@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.3<br>
-    Stand: 12.02.2026, 20:30 Uhr
+    Aktuelle Versionsnummer 3.2.4<br>
+    Stand: 13.02.2026, 11:15 Uhr
 </div>
 
 <script>
@@ -473,7 +473,15 @@
             'ruhe': 'Ruhe', 'schulung': 'Schulung', 'ruhe-nacht': 'Ruhe Nach Nacht',
             'krank-nacht': 'Krank Nach Nacht'
         };
-        activeStatus = displayNames[st] || 'Dienst'; 
+        let targetStatus = displayNames[st] || 'Dienst'; 
+        
+        // Toggle-Logik: Wenn bereits aktiv, auf Dienst zurücksetzen
+        if (activeStatus === targetStatus) {
+            activeStatus = 'Dienst';
+        } else {
+            activeStatus = targetStatus;
+        }
+
         const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank', 'Schulung'].includes(activeStatus);
         const showTimes = !isAllDayOff || isTimedOff;
