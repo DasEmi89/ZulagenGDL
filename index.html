@@ -48,12 +48,12 @@
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; border-collapse: separate; }
         
-        /* Dezentere Status-Hintergründe für Zeilen */
-        .type-dienst { background-color: rgba(37, 99, 235, 0.05) !important; }
-        .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.05) !important; }
-        .type-krank { background-color: rgba(239, 68, 68, 0.05) !important; }
-        .type-urlaub { background-color: rgba(22, 163, 74, 0.05) !important; }
-        .type-ruhe, .type-schulung { background-color: rgba(100, 116, 139, 0.05) !important; }
+        /* Kontrastreichere Status-Hintergründe (15% Sichtbarkeit) */
+        .type-dienst { background-color: rgba(37, 99, 235, 0.15) !important; }
+        .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.15) !important; }
+        .type-krank { background-color: rgba(239, 68, 68, 0.15) !important; }
+        .type-urlaub { background-color: rgba(22, 163, 74, 0.15) !important; }
+        .type-ruhe, .type-schulung { background-color: rgba(100, 116, 139, 0.15) !important; }
 
         .type-dienst td:first-child { border-left: 5px solid var(--p) !important; }
         .type-bereit td:first-child, .type-dispo td:first-child { border-left: 5px solid var(--warn) !important; }
@@ -61,10 +61,10 @@
         .type-urlaub td:first-child { border-left: 5px solid var(--success) !important; }
         .type-ruhe td:first-child, .type-schulung td:first-child { border-left: 5px solid #64748b !important; }
 
-        .row-today { background-color: rgba(37, 99, 235, 0.12) !important; }
+        .row-today { background-color: rgba(37, 99, 235, 0.25) !important; }
         .is-future td:not(.action-btns) { opacity: 0.45; }
         
-        .row-status-info { font-size: 0.65rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; }
+        .row-status-info { font-size: 0.65rem; color: #1e293b; margin-top: 4px; display: flex; gap: 8px; font-weight: 600; }
 
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; }
         .btn-mini { padding: 6px 10px; border-radius: 6px; border: none; color: white; cursor: pointer; font-size: 0.7rem; font-weight: bold; width: 35px; height: 35px; }
@@ -81,7 +81,7 @@
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
         .is-edited-mark { color: var(--warn); font-weight: bold; font-size: 1rem; margin-left: 4px; }
         .highlight-row { animation: highlightFade 2s ease-out; }
-        @keyframes highlightFade { 0% { background-color: rgba(37, 99, 235, 0.2); } 100% { background-color: transparent; } }
+        @keyframes highlightFade { 0% { background-color: rgba(37, 99, 235, 0.4); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body>
@@ -254,8 +254,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.2<br>
-    Stand: 16.02.2026, 12:15 Uhr
+    Aktuelle Versionsnummer 3.3.3<br>
+    Stand: 16.02.2026, 12:45 Uhr
 </div>
 
 <script>
@@ -369,9 +369,7 @@
 
     async function applyImportData(jsonStr) {
         try {
-            // Automatisches Backup vor Import
             await exportData(true);
-            
             const p = JSON.parse(jsonStr);
             if(p.taxConfig) taxConfig = p.taxConfig;
             if(p.data && Array.isArray(p.data)) {
@@ -624,17 +622,14 @@
         }
         if(!hasConflict) {
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            
             let savedDate = d_start;
             cancelEdit(); 
-            
             if(!id) {
                 let nextDate = new Date(savedDate);
                 nextDate.setDate(nextDate.getDate() + 1);
                 document.getElementById('d').value = nextDate.toISOString().split('T')[0];
                 autoDetectDay();
             }
-
             render();
             if(lastId) {
                 setTimeout(() => {
@@ -678,6 +673,7 @@
                 if(st.includes('krank')) yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
                 if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
+                if(r.loc === 'BRGB' && (st === 'dienst' || st === 'bereit' || st === 'dispo')) yS.brgb++;
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
                 mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
@@ -694,12 +690,9 @@
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
-            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
+            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             let focusHtml = ""; let otherHtmlArr = [];
-            
-            // Sortierung für Hauptanzeige (absteigend)
             const sortedMonthKeys = Object.keys(yData.months).sort().reverse();
-            
             sortedMonthKeys.forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
@@ -731,10 +724,8 @@
                             const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
-                            
                             const shiftZulagen = [];
                             const canEarnZulagen = ['dienst', 'bereit', 'dispo'].includes(stLower);
-                            
                             if(canEarnZulagen) {
                                 if(r.nH > 0) shiftZulagen.push(`Na: ${(r.nH * config.nacht).toFixed(2)}€`);
                                 if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
@@ -744,19 +735,14 @@
                                 if(r.spesen > 0) shiftZulagen.push(`Spesen: ${r.spesen.toFixed(2)}€`);
                                 if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
                             }
-                            
-                            const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#94a3b8; margin-top:2px; font-weight:normal;">${shiftZulagen.join(' | ')}</div>` : '';
-
-                            let displayStatus = r.status;
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#1e293b; margin-top:2px; font-weight:700;">${shiftZulagen.join(' | ')}</div>` : '';
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtmlArr.push({key: m, html: mHtml}); }
             });
             yearHtml += focusHtml;
-            
             if(otherHtmlArr.length > 0) {
                 const oOpen = openOthers.has(y);
-                // Umgekehrte Sortierung für "Weitere Monate" (Aufsteigend Jan->Dez)
                 const otherHtml = otherHtmlArr.sort((a,b) => a.key.localeCompare(b.key)).map(x => x.html).join('');
                 yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherHtmlArr.length})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
             }
@@ -794,12 +780,8 @@
             const stL = shift.status.toLowerCase();
             const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(statusFormatted);
             const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
-            
             let icon = "🚄";
-            if (stL.includes("urlaub")) icon = "🏖️";
-            else if (stL.includes("krank")) icon = "🚑";
-            else if (stL.includes("ruhe")) icon = "🛌🏽";
-
+            if (stL.includes("urlaub")) icon = "🏖️"; else if (stL.includes("krank")) icon = "🚑"; else if (stL.includes("ruhe")) icon = "🛌🏽";
             let summary, startStr, endStr;
             if (isAllDay) {
                 summary = `${icon} ${statusFormatted} ${icon}`;
@@ -809,10 +791,7 @@
                 startStr = `DTSTART;VALUE=DATE:${d1}`; endStr = `DTEND;VALUE=DATE:${d2}`;
             } else {
                 let label = "Dienst";
-                if (stL.includes("dispo")) label = "Dispo";
-                else if (stL.includes("schulung")) label = "Schulung";
-                else if (stL.includes("bereit")) label = "Bereitschaft";
-                
+                if (stL.includes("dispo")) label = "Dispo"; else if (stL.includes("schulung")) label = "Schulung"; else if (stL.includes("bereit")) label = "Bereitschaft";
                 const titleText = isTimedOff ? statusFormatted : `${label} ${shift.s} - ${shift.e}`;
                 summary = `${icon} ${titleText} ${icon}`;
                 const tStart = shift.d.replace(/-/g, '') + 'T' + shift.s.replace(':', '') + '00';
