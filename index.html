@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.5<br>
-    Stand: 16.02.2026, 01:45 Uhr
+    Aktuelle Versionsnummer 3.2.6<br>
+    Stand: 16.02.2026, 02:10 Uhr
 </div>
 
 <script>
@@ -697,13 +697,18 @@
                             
                             // Berechnung der Brutto-Zulagen pro Schicht
                             const shiftZulagen = [];
-                            if(r.nH > 0) shiftZulagen.push(`Na: ${(Math.round(r.nH) * config.nacht).toFixed(2)}€`);
-                            if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
-                            if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
-                            if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
-                            if(r.bonus > 0) shiftZulagen.push(`4h: ${r.bonus.toFixed(2)}€`);
-                            if(r.spesen > 0) shiftZulagen.push(`Spesen: ${r.spesen.toFixed(2)}€`);
-                            if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
+                            const canEarnZulagen = ['dienst', 'bereit', 'dispo'].includes(stLower);
+                            
+                            if(canEarnZulagen) {
+                                if(r.nH > 0) shiftZulagen.push(`Na: ${(Math.round(r.nH) * config.nacht).toFixed(2)}€`);
+                                if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
+                                if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
+                                if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
+                                if(r.bonus > 0) shiftZulagen.push(`4h: ${r.bonus.toFixed(2)}€`);
+                                if(r.spesen > 0) shiftZulagen.push(`Spesen: ${r.spesen.toFixed(2)}€`);
+                                if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
+                            }
+                            
                             const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#94a3b8; margin-top:2px; font-weight:normal;">${shiftZulagen.join(' | ')}</div>` : '';
 
                             let displayStatus = r.status;
