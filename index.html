@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.4<br>
-    Stand: 13.02.2026, 11:15 Uhr
+    Aktuelle Versionsnummer 3.2.5<br>
+    Stand: 16.02.2026, 01:45 Uhr
 </div>
 
 <script>
@@ -475,7 +475,6 @@
         };
         let targetStatus = displayNames[st] || 'Dienst'; 
         
-        // Toggle-Logik: Wenn bereits aktiv, auf Dienst zurücksetzen
         if (activeStatus === targetStatus) {
             activeStatus = 'Dienst';
         } else {
@@ -695,8 +694,20 @@
                             const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
+                            
+                            // Berechnung der Brutto-Zulagen pro Schicht
+                            const shiftZulagen = [];
+                            if(r.nH > 0) shiftZulagen.push(`Na: ${(Math.round(r.nH) * config.nacht).toFixed(2)}€`);
+                            if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
+                            if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
+                            if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
+                            if(r.bonus > 0) shiftZulagen.push(`4h: ${r.bonus.toFixed(2)}€`);
+                            if(r.spesen > 0) shiftZulagen.push(`Spesen: ${r.spesen.toFixed(2)}€`);
+                            if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
+                            const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#94a3b8; margin-top:2px; font-weight:normal;">${shiftZulagen.join(' | ')}</div>` : '';
+
                             let displayStatus = r.status;
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small><div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
             });
