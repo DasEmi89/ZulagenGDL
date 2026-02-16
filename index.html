@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.0<br>
-    Stand: 16.02.2026, 03:25 Uhr
+    Aktuelle Versionsnummer 3.3.1<br>
+    Stand: 16.02.2026, 11:45 Uhr
 </div>
 
 <script>
@@ -491,7 +491,7 @@
         }); 
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
-        document.getElementById('date-range-box').style.display = (isAllDayOff && !isTimedOff) ? 'grid' : 'none';
+        document.getElementById('date-range-box').style.display = 'none'; 
         const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
@@ -555,11 +555,10 @@
 
     function add() {
         const d_start=document.getElementById('d').value; if(!d_start) return;
-        const d_end_in=document.getElementById('d_end').value;
         const id=document.getElementById('edit-id').value;
         const extraHValue = document.getElementById('extra_h').value;
         let loopStart = new Date(d_start);
-        let loopEnd = (d_end_in && !id && ['Urlaub','Krank','Ruhe','Schulung'].includes(activeStatus)) ? new Date(d_end_in) : new Date(d_start);
+        let loopEnd = new Date(d_start); 
         let lastId = null;
         let hasConflict = false;
         while(loopStart <= loopEnd) {
@@ -601,7 +600,18 @@
         }
         if(!hasConflict) {
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            cancelEdit(); render();
+            
+            let savedDate = d_start;
+            cancelEdit(); 
+            
+            if(!id) {
+                let nextDate = new Date(savedDate);
+                nextDate.setDate(nextDate.getDate() + 1);
+                document.getElementById('d').value = nextDate.toISOString().split('T')[0];
+                autoDetectDay();
+            }
+
+            render();
             if(lastId) {
                 setTimeout(() => {
                     const el = document.getElementById('row-' + lastId);
