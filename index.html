@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.6<br>
-    Stand: 16.02.2026, 02:10 Uhr
+    Aktuelle Versionsnummer 3.2.7<br>
+    Stand: 16.02.2026, 02:45 Uhr
 </div>
 
 <script>
@@ -695,12 +695,11 @@
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
                             
-                            // Berechnung der Brutto-Zulagen pro Schicht
                             const shiftZulagen = [];
                             const canEarnZulagen = ['dienst', 'bereit', 'dispo'].includes(stLower);
                             
                             if(canEarnZulagen) {
-                                if(r.nH > 0) shiftZulagen.push(`Na: ${(Math.round(r.nH) * config.nacht).toFixed(2)}€`);
+                                if(r.nH > 0) shiftZulagen.push(`Na: ${(r.nH * config.nacht).toFixed(2)}€`);
                                 if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
                                 if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
                                 if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
