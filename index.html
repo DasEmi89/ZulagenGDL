@@ -248,8 +248,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.2.7<br>
-    Stand: 16.02.2026, 02:45 Uhr
+    Aktuelle Versionsnummer 3.3.0<br>
+    Stand: 16.02.2026, 03:25 Uhr
 </div>
 
 <script>
@@ -503,11 +503,10 @@
     function calculateShift(r) {
         let statusCheck = r.status.toLowerCase();
         let baseH = 0;
-        if(['dienst','krank','bereit','dispo','ruhe nach nacht','krank nach nacht'].includes(statusCheck)) {
+        
+        if(['dienst','bereit','dispo'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
-            if((statusCheck === 'krank' || statusCheck === 'krank nach nacht') && (t1 === null || t2 === null)) {
-                baseH = config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
-            } else if (t1 !== null && t2 !== null) {
+            if (t1 !== null && t2 !== null) {
                 if(t2<=t1) t2+=24;
                 let n=0, sz=0, so=0, ft=0, w=0;
                 let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
@@ -519,25 +518,25 @@
                         if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
                     }
                 }
-                if(statusCheck === 'krank nach nacht') baseH = config.gutschrift; else baseH=w;
-                if(statusCheck === 'ruhe nach nacht') baseH = 0;
+                baseH=w;
                 r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
-                r.bonus=(!['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck) && ((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4))) ? config.bonus : 0;
+                r.bonus=((t1%24>=0 && t1%24<4) || (t2%24>0 && t2%24<=4)) ? config.bonus : 0;
                 let abw = 0;
-                if (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) { 
+                if (r.tr) { 
                     let wH = (r.korrHin && !isNaN(r.korrHin)) ? (parseFloat(r.korrHin)/60) : (config.wegeHin/60);
                     let wR = (r.korrRueck && !isNaN(r.korrRueck)) ? (parseFloat(r.korrRueck)/60) : (config.wegeRueck/60);
                     let diff = (statusCheck === 'bereit') ? (timeToDec(r.eb) - timeToDec(r.ev)) : (t2-t1);
                     if(statusCheck === 'bereit' && (timeToDec(r.eb) <= timeToDec(r.ev))) diff += 24;
                     abw = (r.loc === 'BRGB') ? (diff + wH + wR) : (diff - (7/60));
                 }
-                r.spesen = ['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)?0:(Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0);
-                r.fae = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? config.fahrt : 0; r.faeCount = (r.tr && !['krank','krank nach nacht','ruhe nach nacht'].includes(statusCheck)) ? 1 : 0;
+                r.spesen = Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0;
+                r.fae = r.tr ? config.fahrt : 0; r.faeCount = r.tr ? 1 : 0;
             }
-        } else if(statusCheck==='urlaub' || statusCheck==='schulung' || statusCheck==='ruhe') { 
-            baseH=statusCheck==='ruhe'?0:config.gutschrift; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
+        } else if(['krank','krank nach nacht','urlaub','schulung'].includes(statusCheck)) {
+            baseH = config.gutschrift;
+            r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0;
         } else { 
-            baseH=r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
+            baseH=0; r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0; 
         }
         r.h = baseH + (parseFloat(r.extra_h) || 0);
         return r;
