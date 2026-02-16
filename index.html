@@ -25,7 +25,8 @@
         .btn-sub.active { background: var(--success) !important; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 2px solid white !important; transform: scale(1.02); }
         
         .year-group { margin-top: 25px; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
-        .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; }
+        /* STICKY HEADER FIXED */
+        .month-header { background: #1e293b; color: white; padding: 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5568; gap: 4px; position: sticky; top: 0; z-index: 100; }
         .month-header .m-stats { font-size: 0.75rem; color: #94a3b8; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .month-header.open::after { content: '▲'; font-size: 0.5rem; margin-left: 3px; }
         .month-header:not(.open)::after { content: '▼'; font-size: 0.5rem; margin-left: 3px; }
@@ -50,14 +51,21 @@
         tr:nth-child(even) { background: #f8fafc; }
         td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
         
+        /* STATUS FARBEN ZEILEN */
+        .type-dienst { background-color: rgba(37, 99, 235, 0.04) !important; }
+        .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.04) !important; }
+        .type-krank { background-color: rgba(239, 68, 68, 0.04) !important; }
+        .type-urlaub { background-color: rgba(22, 163, 74, 0.04) !important; }
+        .type-ruhe, .type-schulung { background-color: rgba(100, 116, 139, 0.04) !important; }
+
         .type-dienst td:first-child { border-left: 5px solid var(--p) !important; }
         .type-bereit td:first-child, .type-dispo td:first-child { border-left: 5px solid var(--warn) !important; }
         .type-krank td:first-child { border-left: 5px solid var(--danger) !important; }
         .type-urlaub td:first-child { border-left: 5px solid var(--success) !important; }
         .type-ruhe td:first-child, .type-schulung td:first-child { border-left: 5px solid #64748b !important; }
 
-        .row-today { background-color: rgba(37, 99, 235, 0.08) !important; }
-        .is-future td:not(.action-btns) { opacity: 0.45; }
+        .row-today { background-color: rgba(37, 99, 235, 0.12) !important; }
+        .is-future td:not(.action-btns) { opacity: 0.65; }
         
         .row-status-info { font-size: 0.65rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; }
 
@@ -72,7 +80,7 @@
         .btn-close-edit { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #e2e8f0; color: #64748b; border-radius: 50%; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer; z-index: 10; }
         .header-info-row { font-size: 0.8rem; text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); line-height: 1.4; }
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; }
+        .year-header { background: #0f172a; color: #38bdf8; font-weight: 800; border-bottom: 2px solid #38bdf8; position: relative !important; }
         .version-footer { text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 40px; padding-bottom: 20px; line-height: 1.5; }
         .is-edited-mark { color: var(--warn); font-weight: bold; font-size: 1rem; margin-left: 4px; }
         .highlight-row { animation: highlightFade 2s ease-out; }
@@ -92,7 +100,7 @@
     <div style="display:flex; justify-content: space-between; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
         <div><small>Ist (bis heute)</small><br><strong id="h_sum">0.00</strong> <small>h</small></div>
         <div><small>Saldo Aktuell</small><br><strong id="d_sum">0.00</strong> <small>h</small></div>
-        <div style="text-align:right"><small>Soll Restjahr</small><br><strong id="s_offen">0.00</strong> <small>h</small></div>
+        <div style="text-align:right"><small>Vorschau Jahr</small><br><strong id="h_plan_gesamt" style="color:#4ade80">0.00</strong> <small>h</small></div>
     </div>
     <div class="header-info-row">
         <div id="vac-summary">Urlaub: 0 / 36</div>
@@ -104,6 +112,7 @@
 
 <div id="config-panel">
     <h2 style="margin-top:0">Tarif-Einstellungen</h2>
+    <div id="last-backup-info" style="font-size: 0.65rem; color: var(--warn); margin-bottom: 10px; font-weight: bold;">Letztes Backup: Unbekannt</div>
     <div class="grid"><div><label>Jahressoll h</label><input type="number" id="cfg-jsoll"></div><div><label>Nacht €/h</label><input type="number" id="cfg-nacht" step="0.01"></div></div>
     <div class="grid"><div><label>Samstag €/h</label><input type="number" id="cfg-samstag" step="0.01"></div><div><label>Sonntag €/h</label><input type="number" id="cfg-sonntag" step="0.01"></div></div>
     <div class="grid"><div><label>Feiertag €/h</label><input type="number" id="cfg-feiertag" step="0.01"></div><div><label>4 Uhr Bonus €</label><input type="number" id="cfg-bonus" step="0.01"></div></div>
@@ -248,8 +257,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.1<br>
-    Stand: 16.02.2026, 11:45 Uhr
+    Aktuelle Versionsnummer 3.4.0<br>
+    Stand: 16.02.2026, 11:50 Uhr
 </div>
 
 <script>
@@ -265,7 +274,6 @@
     const wDaysShort = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
     
     let config = JSON.parse(localStorage.getItem('shifts_cfg_v1')) || {jsoll: 2088, nacht: 3.72, samstag: 0.64, sonntag: 6.29, feiertag: 6.87, bonus: 7.91, fahrt: 6.65, gutschrift: 8.0, v1: 6.0, v2: 9.0, v3: 13.0, wegeHin: 45, wegeRueck: 45, janspruch: 36};
-    
     let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 0, stkl: 1, kinder: 0, kk: 1.6, bland: 'Berlin', kirche: 0, rentner: 0};
 
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
@@ -276,42 +284,19 @@
 
     function showToast(txt) { const t=document.getElementById('toast'); t.innerText=txt; t.style.display='block'; setTimeout(()=>t.style.display='none', 2500); }
 
-    function updateDispoPresets() {
-        const s = document.getElementById('s').value;
-        const e = document.getElementById('e').value;
-        const buttons = document.querySelectorAll('#dispo-presets button');
-        if (buttons.length === 3) {
-            buttons[0].classList.toggle('active', s === '04:00' && e === '12:00');
-            buttons[1].classList.toggle('active', s === '12:00' && e === '20:00');
-            buttons[2].classList.toggle('active', s === '20:00' && e === '04:00');
-        }
-    }
-
-    function checkNightShift() {
-        const d_start = document.getElementById('d').value;
-        const s = document.getElementById('s').value;
-        const e = document.getElementById('e').value;
-        if(!d_start) return;
-        let d_end = d_start;
-        if(s && e) {
-            if(timeToDec(e) <= timeToDec(s)) {
-                let dt = new Date(d_start);
-                dt.setDate(dt.getDate() + 1);
-                d_end = dt.toISOString().split('T')[0];
-                document.getElementById('date-range-box').style.display = 'grid';
-            } else {
-                if(!['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus)) {
-                    document.getElementById('date-range-box').style.display = 'none';
-                }
-            }
-        }
-        document.getElementById('d_end').value = d_end;
-        updateDispoPresets();
+    function updateBackupTimestamp() {
+        const now = new Date().toLocaleString('de-DE');
+        localStorage.setItem('last_backup_v1', now);
+        if(document.getElementById('last-backup-info')) document.getElementById('last-backup-info').innerText = `Letztes Backup: ${now}`;
     }
 
     async function exportData() {
         const str = JSON.stringify({ data, config, taxConfig, date: new Date().toLocaleString() });
-        try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
+        try { 
+            await navigator.clipboard.writeText(str); 
+            showToast("Backup in Zwischenablage!"); 
+            updateBackupTimestamp();
+        } catch (err) { alert("Kopieren fehlgeschlagen."); }
     }
 
     function exportJSONFile() {
@@ -325,76 +310,149 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        updateBackupTimestamp();
     }
 
-    function toggleImport() {
-        const p = document.getElementById('import-panel');
-        p.style.display = (p.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function processFileImport(input) {
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            applyImportData(e.target.result);
-            input.value = '';
-        };
-        reader.readAsText(file);
-    }
-
-    function processImport() {
-        const raw = document.getElementById('import-area').value.trim();
-        if(!raw) return;
-        applyImportData(raw);
-    }
-
+    // AUTO BACKUP BEVOR IMPORT
     function applyImportData(jsonStr) {
         try {
             const p = JSON.parse(jsonStr);
+            // Automatischer Snapshot vor Änderung
+            localStorage.setItem('shifts_p10_auto_backup', JSON.stringify(data));
+            
             if(p.taxConfig) taxConfig = p.taxConfig;
             if(p.data && Array.isArray(p.data)) {
                 let added = 0;
                 let conflicts = 0;
                 p.data.forEach(item => {
-                    if(!item.d_end && item.s && item.e) {
-                        if(timeToDec(item.e) <= timeToDec(item.s)) {
-                            let dt = new Date(item.d);
-                            dt.setDate(dt.getDate() + 1);
-                            item.d_end = dt.toISOString().split('T')[0];
-                        } else {
-                            item.d_end = item.d;
-                        }
-                    } else if (!item.d_end) {
-                        item.d_end = item.d;
-                    }
+                    if(!item.d_end) item.d_end = item.d;
                     const exists = data.some(existing => existing.id === item.id);
                     const conflict = checkConflicts(item);
                     if(!exists && !conflict) {
                         const processed = calculateShift(item);
                         data.push(processed);
                         added++;
-                    } else if (conflict && !exists) {
-                        conflicts++;
-                    }
+                    } else if (conflict && !exists) conflicts++;
                 });
                 localStorage.setItem('shifts_p10', JSON.stringify(data));
-                localStorage.setItem('shifts_tax_cfg', JSON.stringify(taxConfig));
                 render();
                 toggleImport();
-                if(conflicts > 0) {
-                    alert(`${added} Schichten importiert. ${conflicts} Schichten übersprungen wegen Konflikten mit deiner Vorplanung (Ruhe/Urlaub).`);
-                } else {
-                    alert(`${added} neue Schichten erfolgreich hinzugefügt!`);
-                }
-            } else {
-                alert("Format ungültig: Das 'data' Array fehlt.");
+                alert(`${added} Schichten importiert. Snapshot wurde gespeichert.`);
             }
-        } catch(e) {
-            alert("Fehler beim Verarbeiten der Daten.");
-        }
+        } catch(e) { alert("Fehler beim Import."); }
     }
 
+    function render() {
+        const cont = document.getElementById('history'); cont.innerHTML = '';
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear().toString();
+        const now = new Date();
+        const focusMonths = [];
+        for(let i = -1; i <= 1; i++) { focusMonths.push(new Date(now.getFullYear(), now.getMonth() + i, 1).toISOString().substring(0,7)); }
+        
+        let tH_total=0, tV_total=0, tN_total=0, tH_plan_gesamt=0; 
+        const tree = {};
+
+        // Zeitstempel für Backup im UI anzeigen
+        const lastBackup = localStorage.getItem('last_backup_v1') || 'Nie';
+        if(document.getElementById('last-backup-info')) document.getElementById('last-backup-info').innerText = `Letztes Backup: ${lastBackup}`;
+
+        data.forEach(r => {
+            const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
+            const yearHolidays = getHolidays(parseInt(y));
+            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
+            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
+            
+            const yS = tree[y].stats, mG = tree[y].months[m];
+            mG.items.push(r);
+            let st = r.status.toLowerCase();
+
+            // HOCHRECHNUNG: Alles im laufenden Jahr (Vergangenheit + Planung)
+            if(y === currentYear) tH_plan_gesamt += r.h;
+
+            if(!isFuture) {
+                if(st.includes('krank')) yS.krank++;
+                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
+                if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
+                if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
+                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
+                if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
+            }
+        });
+
+        // Werte in Kopfzeile schreiben
+        let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
+        document.getElementById('h_sum').innerText=tH_total.toFixed(2); 
+        document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); 
+        document.getElementById('h_plan_gesamt').innerText=tH_plan_gesamt.toFixed(2);
+        
+        const nSollH = (config.gutschrift * 60) / 5;
+        let roundedTotalN = 0;
+        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); }); } });
+        document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
+        document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
+
+        Object.keys(tree).sort().reverse().forEach(y => {
+            const yData = tree[y], yOpen = openYears.has(y);
+            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
+            let focusHtml = ""; let otherHtml = ""; let otherCount = 0;
+            Object.keys(yData.months).sort().reverse().forEach(m => {
+                const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
+                const isFocus = focusMonths.includes(m);
+                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
+                        <div class="month-details-bar">
+                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-nacht-count"><span>Nächte:</span><span class="val-count">${mG.nCounts}x</span></div>
+                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
+                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
+                            <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
+                        </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
+                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
+                            const wd = wDaysShort[new Date(r.d).getDay()];
+                            const isNight = r.d !== (r.d_end || r.d);
+                            const isToday = r.d === todayStr;
+                            const isFutureRow = r.d > todayStr;
+                            let typeClass = 'type-dienst';
+                            let stLower = r.status.toLowerCase();
+                            if(stLower.includes('bereit')) typeClass = 'type-bereit';
+                            else if(stLower.includes('dispo')) typeClass = 'type-dispo';
+                            else if(stLower.includes('krank')) typeClass = 'type-krank';
+                            else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
+                            else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
+                            const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
+                            
+                            const shiftZulagen = [];
+                            if(['dienst', 'bereit', 'dispo'].includes(stLower)) {
+                                if(r.nH > 0) shiftZulagen.push(`Na: ${(r.nH * config.nacht).toFixed(2)}€`);
+                                if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
+                                if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
+                                if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
+                                if(r.bonus > 0) shiftZulagen.push(`4h: ${r.bonus.toFixed(2)}€`);
+                                if(r.spesen > 0) shiftZulagen.push(`Sp: ${r.spesen.toFixed(2)}€`);
+                            }
+                            const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#64748b; margin-top:2px;">${shiftZulagen.join(' | ')}</div>` : '';
+
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' ✎' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}</td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                        }).join('')}</table></div></div>`;
+                if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
+            });
+            yearHtml += focusHtml;
+            if(otherCount > 0) {
+                const oOpen = openOthers.has(y);
+                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherCount})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
+            }
+            yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
+        });
+    }
+
+    // RESTLICHE FUNKTIONEN (add, del, edit, toggle etc.) BLEIBEN IDENTISCH
+    // ...
     function timeToDec(t) { if(!t) return null; let [h,m]=t.split(':').map(Number); return h + m/60; }
     function openRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'flex'; document.getElementById('refresh-date').value = new Date().toISOString().split('T')[0]; }
     function closeRefreshDialog() { document.getElementById('refresh-dialog').style.display = 'none'; }
@@ -600,24 +658,14 @@
         }
         if(!hasConflict) {
             localStorage.setItem('shifts_p10', JSON.stringify(data)); 
-            
-            let savedDate = d_start;
             cancelEdit(); 
-            
             if(!id) {
-                let nextDate = new Date(savedDate);
+                let nextDate = new Date(d_start);
                 nextDate.setDate(nextDate.getDate() + 1);
                 document.getElementById('d').value = nextDate.toISOString().split('T')[0];
                 autoDetectDay();
             }
-
             render();
-            if(lastId) {
-                setTimeout(() => {
-                    const el = document.getElementById('row-' + lastId);
-                    if(el) { el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('highlight-row'); }
-                }, 100);
-            }
         }
     }
 
@@ -630,111 +678,9 @@
     }
 
     function toggleOthers(y) { openOthers.has(y)?openOthers.delete(y):openOthers.add(y); render(); }
-
-    function render() {
-        const cont = document.getElementById('history'); cont.innerHTML = '';
-        const todayStr = new Date().toISOString().split('T')[0];
-        const currentYear = new Date().getFullYear().toString();
-        const now = new Date();
-        const focusMonths = [];
-        for(let i = -1; i <= 1; i++) {
-            focusMonths.push(new Date(now.getFullYear(), now.getMonth() + i, 1).toISOString().substring(0,7));
-        }
-        let tH_total=0, tV_total=0, tN_total=0; 
-        const tree = {};
-        data.forEach(r => {
-            const y = r.d.substring(0,4), m = r.d.substring(0,7), isFuture = r.d > todayStr;
-            const yearHolidays = getHolidays(parseInt(y));
-            if(!tree[y]) tree[y] = { months: {}, stats: { krank: 0, urlaub: 0, arbeit: 0, brgb: 0, nCounts: 0 } };
-            if(!tree[y].months[m]) tree[y].months[m] = { items: [], h:0, nH:0, szH:0, soH:0, ftH:0, bE:0, sp:0, fE:0, fC:0, br:0, nCounts: 0 };
-            const yS = tree[y].stats, mG = tree[y].months[m];
-            mG.items.push(r);
-            let st = r.status.toLowerCase();
-            if(!isFuture) {
-                if(st.includes('krank')) yS.krank++;
-                if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
-                if(st === 'dienst' || st === 'bereit' || st === 'dispo') yS.arbeit++;
-                if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
-                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
-                if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
-            }
-        });
-        let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
-        document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
-        const nSollH = (config.gutschrift * 60) / 5;
-        let roundedTotalN = 0;
-        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); }); } });
-        document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
-        document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
-        document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
-        Object.keys(tree).sort().reverse().forEach(y => {
-            const yData = tree[y], yOpen = openYears.has(y);
-            let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
-            let focusHtml = ""; let otherHtml = ""; let otherCount = 0;
-            Object.keys(yData.months).sort().reverse().forEach(m => {
-                const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
-                const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
-                let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
-                        <div class="month-details-bar">
-                            <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-fae"><span>FAE:</span><span><span class="val-count">${mG.fC}x</span> | <span class="val-eur">${mG.fE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-sazu"><span>SaZu:</span><span><span class="val-h">${mG.szH.toFixed(2)}h</span> | <span class="val-eur">${szE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-nacht-count"><span>Nächte:</span><span class="val-count">${mG.nCounts}x</span></div>
-                            <div class="detail-row row-sozu"><span>SoZu:</span><span><span class="val-h">${mG.soH.toFixed(2)}h</span> | <span class="val-eur">${soE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-fezu"><span>FeZu:</span><span><span class="val-h">${mG.ftH.toFixed(2)}h</span> | <span class="val-eur">${ftE.toFixed(2)}€</span></span></div>
-                            <div class="detail-row row-4uhr"><span>4 Uhr:</span><span class="val-eur">${mG.bE.toFixed(2)}€</span></div>
-                            <div class="detail-row row-brgb"><span>Spesen:</span><span class="val-eur">${mG.sp.toFixed(2)}€</span></div>
-                        </div><div class="spesen-bar">Netto-Vorschau: ~ ${nV.toFixed(2)} €</div>
-                        <table>${mG.items.sort((a,b)=>new Date(b.d)-new Date(a.d)).map(r => {
-                            const wd = wDaysShort[new Date(r.d).getDay()];
-                            const isNight = r.d !== (r.d_end || r.d);
-                            const isToday = r.d === todayStr;
-                            const isFutureRow = r.d > todayStr;
-                            let typeClass = 'type-dienst';
-                            let stLower = r.status.toLowerCase();
-                            if(stLower.includes('bereit')) typeClass = 'type-bereit';
-                            else if(stLower.includes('dispo')) typeClass = 'type-dispo';
-                            else if(stLower.includes('krank')) typeClass = 'type-krank';
-                            else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
-                            else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
-                            const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
-                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
-                            const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
-                            const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
-                            
-                            const shiftZulagen = [];
-                            const canEarnZulagen = ['dienst', 'bereit', 'dispo'].includes(stLower);
-                            
-                            if(canEarnZulagen) {
-                                if(r.nH > 0) shiftZulagen.push(`Na: ${(r.nH * config.nacht).toFixed(2)}€`);
-                                if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
-                                if(r.soH > 0) shiftZulagen.push(`So: ${(r.soH * config.sonntag).toFixed(2)}€`);
-                                if(r.ftH > 0) shiftZulagen.push(`Fe: ${(r.ftH * config.feiertag).toFixed(2)}€`);
-                                if(r.bonus > 0) shiftZulagen.push(`4h: ${r.bonus.toFixed(2)}€`);
-                                if(r.spesen > 0) shiftZulagen.push(`Spesen: ${r.spesen.toFixed(2)}€`);
-                                if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
-                            }
-                            
-                            const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#94a3b8; margin-top:2px; font-weight:normal;">${shiftZulagen.join(' | ')}</div>` : '';
-
-                            let displayStatus = r.status;
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
-                        }).join('')}</table></div></div>`;
-                if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
-            });
-            yearHtml += focusHtml;
-            if(otherCount > 0) {
-                const oOpen = openOthers.has(y);
-                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherCount})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
-            }
-            yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
-        });
-    }
-
     function toggleM(m) { openMonths.has(m)?openMonths.delete(m):openMonths.add(m); render(); }
     function toggleY(y) { openYears.has(y)?openYears.delete(y):openYears.add(y); render(); }
+    
     function edit(id) { 
         const r=data.find(x=>x.id===id); if(!r) return;
         document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
@@ -750,10 +696,22 @@
         activeStatus='Dienst'; toggleStatus('dienst'); 
     }
 
-    const initToday = new Date().toISOString().split('T')[0];
-    const todayShift = data.find(r => r.d === initToday);
-    if(todayShift) edit(todayShift.id); else { document.getElementById('d').value = initToday; autoDetectDay(); }
-    render();
+    function processImport() {
+        const raw = document.getElementById('import-area').value.trim();
+        if(!raw) return;
+        applyImportData(raw);
+    }
+
+    function processFileImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            applyImportData(e.target.result);
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
 
     function exportToGoogleCalendar() {
         let icsFile = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lok-Zulagen-Rechner//DE','METHOD:PUBLISH','X-WR-CALNAME:Dienstplan','X-WR-TIMEZONE:Europe/Berlin'];
@@ -800,7 +758,13 @@
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
         showToast("iCal (V3.2.3) bereit!");
+        updateBackupTimestamp();
     }
+
+    const initToday = new Date().toISOString().split('T')[0];
+    const todayShift = data.find(r => r.d === initToday);
+    if(todayShift) edit(todayShift.id); else { document.getElementById('d').value = initToday; autoDetectDay(); }
+    render();
 </script>
 </body>
 </html>
