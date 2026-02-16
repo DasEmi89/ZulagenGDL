@@ -47,16 +47,21 @@
         .month-content { display: none; }
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; border-collapse: separate; }
-        tr:nth-child(even) { background: #f8fafc; }
-        td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
         
+        /* Dezentere Status-Hintergründe für Zeilen */
+        .type-dienst { background-color: rgba(37, 99, 235, 0.05) !important; }
+        .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.05) !important; }
+        .type-krank { background-color: rgba(239, 68, 68, 0.05) !important; }
+        .type-urlaub { background-color: rgba(22, 163, 74, 0.05) !important; }
+        .type-ruhe, .type-schulung { background-color: rgba(100, 116, 139, 0.05) !important; }
+
         .type-dienst td:first-child { border-left: 5px solid var(--p) !important; }
         .type-bereit td:first-child, .type-dispo td:first-child { border-left: 5px solid var(--warn) !important; }
         .type-krank td:first-child { border-left: 5px solid var(--danger) !important; }
         .type-urlaub td:first-child { border-left: 5px solid var(--success) !important; }
         .type-ruhe td:first-child, .type-schulung td:first-child { border-left: 5px solid #64748b !important; }
 
-        .row-today { background-color: rgba(37, 99, 235, 0.08) !important; }
+        .row-today { background-color: rgba(37, 99, 235, 0.12) !important; }
         .is-future td:not(.action-btns) { opacity: 0.45; }
         
         .row-status-info { font-size: 0.65rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; }
@@ -117,7 +122,8 @@
     <div class="grid"><div><label>24h Spesen</label><input type="number" id="cfg-v3" step="0.01"></div><div><label>Urlaubsanspruch</label><input type="number" id="cfg-janspruch"></div></div>
     <hr>
     <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 10px;">Datensicherung</label>
+        <label style="display: block; margin-bottom: 5px;">Datensicherung</label>
+        <div id="last-backup-info" style="font-size: 0.65rem; color: #64748b; margin-bottom: 10px;">Letztes Backup: Nie</div>
         <button onclick="exportData()" style="background:#475569; margin-top:0; font-size:0.9rem;">📥 BACKUP KOPIEREN</button>
         <button onclick="exportJSONFile()" style="background:#2563eb; margin-top:8px; font-size:0.9rem;">💾 ALS .JSON SPEICHERN</button>
         <button onclick="exportToGoogleCalendar()" style="background:#1a73e8; margin-top:8px; font-size:0.9rem;">📅 GOOGLE KALENDER SYNC (iCAL)</button>
@@ -248,8 +254,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.1<br>
-    Stand: 16.02.2026, 11:45 Uhr
+    Aktuelle Versionsnummer 3.3.2<br>
+    Stand: 16.02.2026, 12:15 Uhr
 </div>
 
 <script>
@@ -309,9 +315,20 @@
         updateDispoPresets();
     }
 
-    async function exportData() {
-        const str = JSON.stringify({ data, config, taxConfig, date: new Date().toLocaleString() });
-        try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
+    async function exportData(isAuto = false) {
+        const now = new Date().toLocaleString();
+        const str = JSON.stringify({ data, config, taxConfig, date: now });
+        localStorage.setItem('shifts_last_backup', now);
+        updateBackupInfo();
+        if(!isAuto) {
+            try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
+        }
+    }
+
+    function updateBackupInfo() {
+        const info = localStorage.getItem('shifts_last_backup') || 'Nie';
+        const el = document.getElementById('last-backup-info');
+        if(el) el.innerText = `Letztes Backup: ${info}`;
     }
 
     function exportJSONFile() {
@@ -325,6 +342,7 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        exportData(true);
     }
 
     function toggleImport() {
@@ -349,8 +367,11 @@
         applyImportData(raw);
     }
 
-    function applyImportData(jsonStr) {
+    async function applyImportData(jsonStr) {
         try {
+            // Automatisches Backup vor Import
+            await exportData(true);
+            
             const p = JSON.parse(jsonStr);
             if(p.taxConfig) taxConfig = p.taxConfig;
             if(p.data && Array.isArray(p.data)) {
@@ -383,9 +404,9 @@
                 render();
                 toggleImport();
                 if(conflicts > 0) {
-                    alert(`${added} Schichten importiert. ${conflicts} Schichten übersprungen wegen Konflikten mit deiner Vorplanung (Ruhe/Urlaub).`);
+                    alert(`${added} Schichten importiert. ${conflicts} Schichten übersprungen wegen Konflikten mit deiner Vorplanung (Ruhe/Urlaub). Ein automatisches Backup deiner alten Daten wurde erstellt.`);
                 } else {
-                    alert(`${added} neue Schichten erfolgreich hinzugefügt!`);
+                    alert(`${added} neue Schichten erfolgreich hinzugefügt! (Auto-Backup erstellt)`);
                 }
             } else {
                 alert("Format ungültig: Das 'data' Array fehlt.");
@@ -406,7 +427,10 @@
     
     function toggleConfig() { 
         const p = document.getElementById('config-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block';
-        if(p.style.display === 'block') ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+        if(p.style.display === 'block') {
+            ['jsoll','nacht','samstag','sonntag','feiertag','bonus','fahrt','gutschrift','v1','v2','v3','wegeHin','wegeRueck','janspruch'].forEach(k => document.getElementById('cfg-'+k).value = config[k] || 0);
+            updateBackupInfo();
+        }
     }
     
     function saveConfig() {
@@ -671,8 +695,12 @@
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Nächte: ${yData.stats.nCounts}</span><span>Urlaub: ${yData.stats.urlaub}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
-            let focusHtml = ""; let otherHtml = ""; let otherCount = 0;
-            Object.keys(yData.months).sort().reverse().forEach(m => {
+            let focusHtml = ""; let otherHtmlArr = [];
+            
+            // Sortierung für Hauptanzeige (absteigend)
+            const sortedMonthKeys = Object.keys(yData.months).sort().reverse();
+            
+            sortedMonthKeys.forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
                 const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
@@ -722,12 +750,15 @@
                             let displayStatus = r.status;
                             return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${displayStatus}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
-                if(isFocus) focusHtml += mHtml; else { otherHtml += mHtml; otherCount++; }
+                if(isFocus) focusHtml += mHtml; else { otherHtmlArr.push({key: m, html: mHtml}); }
             });
             yearHtml += focusHtml;
-            if(otherCount > 0) {
+            
+            if(otherHtmlArr.length > 0) {
                 const oOpen = openOthers.has(y);
-                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherCount})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
+                // Umgekehrte Sortierung für "Weitere Monate" (Aufsteigend Jan->Dez)
+                const otherHtml = otherHtmlArr.sort((a,b) => a.key.localeCompare(b.key)).map(x => x.html).join('');
+                yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherHtmlArr.length})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
             }
             yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
         });
