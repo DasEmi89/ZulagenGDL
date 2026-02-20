@@ -48,6 +48,7 @@
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; border-collapse: separate; }
         
+        /* Kontrastreichere Status-Hintergründe (15% Sichtbarkeit) */
         .type-dienst { background-color: rgba(37, 99, 235, 0.15) !important; }
         .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.15) !important; }
         .type-krank { background-color: rgba(239, 68, 68, 0.15) !important; }
@@ -62,6 +63,7 @@
 
         .row-today { background-color: rgba(37, 99, 235, 0.25) !important; }
         .is-future td:not(.action-btns) { opacity: 0.45; }
+        
         .row-status-info { font-size: 0.65rem; color: #1e293b; margin-top: 4px; display: flex; gap: 8px; font-weight: 600; }
 
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; }
@@ -251,8 +253,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.6<br>
-    Stand: 20.02.2026, 08:15 Uhr
+    Aktuelle Versionsnummer 3.3.7<br>
+    Stand: 20.02.2026, 08:30 Uhr
 </div>
 
 <script>
@@ -534,7 +536,12 @@
                         w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
                         const loopHolidays = getHolidays(dt.getFullYear());
                         let isF=loopHolidays.includes(dt.toISOString().split('T')[0]), isO=dt.getDay()===0, isA=dt.getDay()===6;
-                        if(c>=20 || c<6) n+=(1/60); if(isF) ft+=(1/60); else if(isO) so+=(1/60); else if(isA && c>=13 && c<20) sz+=(1/60);
+                        if(c>=20 || c<6) n+=(1/60); 
+                        
+                        // Priorität: Feiertag > Sonntag > Samstag
+                        if(isF) ft+=(1/60); 
+                        else if(isO) so+=(1/60); 
+                        else if(isA && c>=13 && c<20) sz+=(1/60);
                     }
                 }
                 baseH=w;
@@ -551,7 +558,6 @@
                 r.spesen = Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0;
                 r.fae = r.tr ? config.fahrt : 0; r.faeCount = r.tr ? 1 : 0;
                 
-                // Für Schulung explizit KEINE Zulagen berechnen
                 if(statusCheck === 'schulung') {
                     r.nH=0; r.szH=0; r.soH=0; r.ftH=0; r.bonus=0; r.spesen=0; r.fae=0; r.faeCount=0;
                 }
@@ -729,7 +735,7 @@
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
                             const shiftZulagen = [];
-                            const canEarnZulagen = ['dienst', 'bereit', 'dispo'].includes(stLower);
+                            const canEarnZulagen = ['dienst', 'bereit', 'dispo', 'schulung'].includes(stLower);
                             if(canEarnZulagen) {
                                 if(r.nH > 0) shiftZulagen.push(`Na: ${(r.nH * config.nacht).toFixed(2)}€`);
                                 if(r.szH > 0) shiftZulagen.push(`Sa: ${(r.szH * config.samstag).toFixed(2)}€`);
