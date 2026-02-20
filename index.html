@@ -48,7 +48,6 @@
         .month-content.open { display: block; }
         table { width: 100%; border-spacing: 0; background: white; border-collapse: separate; }
         
-        /* Kontrastreichere Status-Hintergründe (15% Sichtbarkeit) */
         .type-dienst { background-color: rgba(37, 99, 235, 0.15) !important; }
         .type-bereit, .type-dispo { background-color: rgba(245, 158, 11, 0.15) !important; }
         .type-krank { background-color: rgba(239, 68, 68, 0.15) !important; }
@@ -63,7 +62,6 @@
 
         .row-today { background-color: rgba(37, 99, 235, 0.25) !important; }
         .is-future td:not(.action-btns) { opacity: 0.45; }
-        
         .row-status-info { font-size: 0.65rem; color: #1e293b; margin-top: 4px; display: flex; gap: 8px; font-weight: 600; }
 
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; }
@@ -212,11 +210,6 @@
         <button class="btn-sub" onclick="setDispoTime('20:00','04:00')">Nacht (20-4)</button>
     </div>
 
-    <div style="margin-bottom: 12px;">
-        <label>Gutgeschriebene Stunden (Bonus)</label>
-        <input type="number" id="extra_h" step="0.01" placeholder="z.B. 4.0">
-    </div>
-
     <div id="bereitschaft-felder" class="bereitschaft-extra" style="display:none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 10px; margin-bottom: 12px;">
         <label style="color:var(--warn); margin-bottom:8px; display:block;">Einsatz auswärts (für Ausbleibezeit)</label>
         <div class="grid"><div><label>Von</label><input type="time" id="ev"></div><div><label>Bis</label><input type="time" id="eb"></div></div>
@@ -249,13 +242,17 @@
         <button id="btn-krank-nacht" class="btn-sub" onclick="toggleStatus('krank-nacht')">Krank Nach Nacht</button>
         <button id="btn-schulung" class="btn-sub" onclick="toggleStatus('schulung')">Schulung</button>
     </div>
+    <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+        <label>Gutgeschriebene Stunden (Bonus)</label>
+        <input type="number" id="extra_h" step="0.01" placeholder="z.B. 4.0">
+    </div>
 </div>
 
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.4<br>
-    Stand: 18.02.2026, 13:55 Uhr
+    Aktuelle Versionsnummer 3.3.6<br>
+    Stand: 20.02.2026, 08:15 Uhr
 </div>
 
 <script>
@@ -306,7 +303,7 @@
                 d_end = dt.toISOString().split('T')[0];
                 document.getElementById('date-range-box').style.display = 'grid';
             } else {
-                if(!['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(activeStatus)) {
+                if(!['Urlaub', 'Krank', 'Ruhe'].includes(activeStatus)) {
                     document.getElementById('date-range-box').style.display = 'none';
                 }
             }
@@ -504,7 +501,7 @@
         }
 
         const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
-        const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank', 'Schulung'].includes(activeStatus);
+        const isAllDayOff = ['Urlaub', 'Ruhe', 'Krank'].includes(activeStatus);
         const showTimes = !isAllDayOff || isTimedOff;
         document.getElementById('time-grid').style.display = showTimes ? 'grid' : 'none';
         Object.keys(displayNames).forEach(b => {
@@ -514,7 +511,7 @@
         document.getElementById('bereitschaft-felder').style.display = (activeStatus === 'Bereit') ? 'block' : 'none'; 
         document.getElementById('dispo-presets').style.display = (activeStatus === 'Dispo') ? 'grid' : 'none';
         document.getElementById('date-range-box').style.display = 'none'; 
-        const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Schulung', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
+        const hideExtra = ['Urlaub', 'Krank', 'Ruhe', 'Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(activeStatus);
         document.getElementById('loc-section').style.display = hideExtra ? 'none' : 'grid';
         document.getElementById('fae-section').style.display = hideExtra ? 'none' : 'grid';
         if(isTimedOff && !document.getElementById('e').value) document.getElementById('e').value = '23:59';
@@ -526,7 +523,7 @@
         let statusCheck = r.status.toLowerCase();
         let baseH = 0;
         
-        if(['dienst','bereit','dispo'].includes(statusCheck)) {
+        if(['dienst','bereit','dispo','schulung'].includes(statusCheck)) {
             let t1=timeToDec(r.s), t2=timeToDec(r.e); 
             if (t1 !== null && t2 !== null) {
                 if(t2<=t1) t2+=24;
@@ -553,8 +550,15 @@
                 }
                 r.spesen = Math.max(0, abw)>=8 ? (abw>=24?config.v3:(abw>=14?config.v2:config.v1)) : 0;
                 r.fae = r.tr ? config.fahrt : 0; r.faeCount = r.tr ? 1 : 0;
+                
+                // Für Schulung explizit KEINE Zulagen berechnen
+                if(statusCheck === 'schulung') {
+                    r.nH=0; r.szH=0; r.soH=0; r.ftH=0; r.bonus=0; r.spesen=0; r.fae=0; r.faeCount=0;
+                }
+            } else {
+                if(statusCheck === 'schulung') baseH = config.gutschrift;
             }
-        } else if(['krank','krank nach nacht','urlaub','schulung'].includes(statusCheck)) {
+        } else if(['krank','krank nach nacht','urlaub'].includes(statusCheck)) {
             baseH = config.gutschrift;
             r.nH=r.szH=r.soH=r.ftH=r.bonus=r.spesen=r.fae=r.faeCount=0;
         } else { 
@@ -606,7 +610,7 @@
                 korrRueck:document.getElementById('korrRueck').value,
                 extra_h: extraHValue
             };
-            const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe', 'Schulung'];
+            const overwriteStatuses = ['Urlaub', 'Krank', 'Ruhe'];
             if (overwriteStatuses.includes(formattedStatus)) {
                 data = data.filter(x => x.d !== currentD || (id && x.id === parseInt(id)));
             } else {
@@ -672,7 +676,6 @@
             if(!isFuture) {
                 if(st.includes('krank')) yS.krank++;
                 if(st === 'urlaub' && new Date(r.d).getDay()%6!==0 && !yearHolidays.includes(r.d)) { yS.urlaub++; if(y === currentYear) tV_total++; }
-                // Arbeitstage inkl. Schulung
                 if(['dienst', 'bereit', 'dispo', 'schulung'].includes(st)) yS.arbeit++;
                 if(r.loc === 'BRGB' && ['dienst', 'bereit', 'dispo', 'schulung'].includes(st)) yS.brgb++;
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
@@ -691,7 +694,6 @@
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
-            // Jahres-Statusleiste geändert wie gewünscht
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>Krank: ${yData.stats.krank}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             let focusHtml = ""; let otherHtmlArr = [];
             const sortedMonthKeys = Object.keys(yData.months).sort().reverse();
@@ -723,7 +725,7 @@
                             else if(stLower.includes('urlaub')) typeClass = 'type-urlaub';
                             else if(stLower.includes('ruhe') || stLower.includes('schulung')) typeClass = 'type-ruhe';
                             const rowClass = (isToday ? 'row-today ' : '') + (isFutureRow ? 'is-future ' : '') + typeClass;
-                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'schulung', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
+                            const hideIcons = ['urlaub', 'krank', 'ruhe', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
                             const shiftZulagen = [];
@@ -781,7 +783,7 @@
             const statusFormatted = shift.status;
             const stL = shift.status.toLowerCase();
             const isTimedOff = ['Ruhe Nach Nacht', 'Krank Nach Nacht'].includes(statusFormatted);
-            const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe', 'Schulung'].includes(statusFormatted)) && !isTimedOff;
+            const isAllDay = (!shift.s || !shift.e || ['Urlaub', 'Krank', 'Ruhe'].includes(statusFormatted)) && !isTimedOff;
             let icon = "🚄";
             if (stL.includes("urlaub")) icon = "🏖️"; else if (stL.includes("krank")) icon = "🚑"; else if (stL.includes("ruhe")) icon = "🛌🏽";
             let summary, startStr, endStr;
