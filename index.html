@@ -252,8 +252,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.8<br>
-    Stand: 24.02.2026, 13:50 Uhr
+    Aktuelle Versionsnummer 3.3.9<br>
+    Stand: 24.02.2026, 19:10 Uhr
 </div>
 
 <script>
@@ -550,7 +550,6 @@
                 baseH=w;
                 r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
                 
-                // Präzisierte Bonus-Berechnung
                 let b = 0;
                 if (t1 % 24 >= 0 && t1 % 24 < 4) b += config.bonusStart;
                 if (t2 % 24 > 0 && t2 % 24 <= 4) b += config.bonusEnd;
@@ -743,6 +742,7 @@
                             const hideIcons = ['urlaub', 'krank', 'ruhe', 'ruhe nach nacht', 'krank nach nacht'].includes(stLower);
                             const faeIcon = (r.tr && !hideIcons) ? '🚗' : '';
                             const locIcon = (r.loc && !hideIcons) ? `📍 ${r.loc}` : '';
+                            const pauseIcon = ((r.pd1 > 0 || r.pd2 > 0) && !hideIcons) ? '☕' : '';
                             const shiftZulagen = [];
                             const canEarnZulagen = ['dienst', 'bereit', 'dispo', 'schulung'].includes(stLower);
                             if(canEarnZulagen) {
@@ -755,7 +755,7 @@
                                 if(r.fae > 0) shiftZulagen.push(`FAE: ${r.fae.toFixed(2)}€`);
                             }
                             const shiftZulagenHtml = shiftZulagen.length > 0 ? `<div style="font-size:0.6rem; color:#1e293b; margin-top:2px; font-weight:700;">${shiftZulagen.join(' | ')}</div>` : '';
-                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
+                            return `<tr id="row-${r.id}" class="${rowClass}"><td><b>${wd}, ${r.d.split('-').reverse().slice(0,2).join('.')}</b><br><small>${r.status}${r.isEdited ? ' <span class="is-edited-mark">✎</span>' : ''}</small></td><td>${r.s||'--'}-${r.e||'--'}${isNight ? ' (N)' : ''}<br><small>${r.h.toFixed(1)}h</small>${shiftZulagenHtml}<div class="row-status-info"><span>${locIcon}</span><span>${faeIcon}</span><span>${pauseIcon}</span></div></td><td class="action-btns"><button class="btn-mini btn-edit" onclick="edit(${r.id})">✎</button><button class="btn-mini btn-del" onclick="del(${r.id})">🗑</button></td></tr>`;
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtmlArr.push({key: m, html: mHtml}); }
             });
