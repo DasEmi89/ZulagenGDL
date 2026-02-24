@@ -252,8 +252,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.3.9<br>
-    Stand: 24.02.2026, 19:10 Uhr
+    Aktuelle Versionsnummer 3.4.3<br>
+    Stand: 24.02.2026, 23:10 Uhr
 </div>
 
 <script>
@@ -535,7 +535,13 @@
             if (t1 !== null && t2 !== null) {
                 if(t2<=t1) t2+=24;
                 let n=0, sz=0, so=0, ft=0, w=0;
-                let p = []; if(r.p1s && r.pd1>0){ let s=timeToDec(r.p1s); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } if(r.p2s && r.pd2>0){ let s=timeToDec(r.p2s); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
+                let p = []; 
+                // Fix: Erkenne sowohl p1s/p2s als auch ps1/ps2 (Abwärtskompatibilität für Refresh)
+                let p1Time = r.p1s || r.ps1;
+                let p2Time = r.p2s || r.ps2;
+                if(p1Time && r.pd1>0){ let s=timeToDec(p1Time); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } 
+                if(p2Time && r.pd2>0){ let s=timeToDec(p2Time); if(s<t1)s+=24; p.push({s, e:s+r.pd2/60}); }
+                
                 for(let i=t1; i<t2; i+=(1/60)) {
                     if(!p.some(pa => i>=pa.s && i<pa.e)) {
                         w+=(1/60); let c=i%24, dt=new Date(r.d); if(i>=24) dt.setDate(dt.getDate()+1);
@@ -700,10 +706,10 @@
         let nowTime=new Date(), diffD=Math.max(1, Math.ceil((nowTime-new Date(currentYear,0,1))/864e5)), sollH=(config.jsoll/365)*diffD;
         document.getElementById('h_sum').innerText=tH_total.toFixed(2); document.getElementById('d_sum').innerText=(tH_total-sollH).toFixed(2); document.getElementById('s_offen').innerText=(config.jsoll-tH_total).toFixed(2);
         const nSollH = (config.gutschrift * 60) / 5;
-        let roundedTotalN = 0;
-        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { roundedTotalN += Math.round(tree[y].months[m].nH); }); } });
+        let totalNForVac = 0;
+        Object.keys(tree).forEach(y => { if(y === currentYear) { Object.keys(tree[y].months).forEach(m => { totalNForVac += tree[y].months[m].nH; }); } });
         document.getElementById('vac-summary').innerText=`Urlaub: ${tV_total}/${config.janspruch}`;
-        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(roundedTotalN/nSollH)} Tage (${roundedTotalN.toFixed(0)}/${nSollH.toFixed(0)}h)`;
+        document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(totalNForVac/nSollH)} Tage (${totalNForVac.toFixed(2)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
         Object.keys(tree).sort().reverse().forEach(y => {
@@ -714,7 +720,8 @@
             sortedMonthKeys.forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                const rNH = Math.round(mG.nH), nE = rNH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
+                // Fix: rNH (Display) und nE (Berechnung) nutzen nun den exakten Minutenwert (kein Math.round)
+                const rNH = mG.nH.toFixed(2), nE = mG.nH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
                             <div class="detail-row row-nazu"><span>NaZu:</span><span><span class="val-h">${rNH}h</span> | <span class="val-eur">${nE.toFixed(2)}€</span></span></div>
@@ -775,7 +782,8 @@
         const r=data.find(x=>x.id===id); if(!r) return;
         document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
         document.getElementById('s').value=r.s||''; document.getElementById('e').value=r.e||''; document.getElementById('ev').value=r.ev||''; document.getElementById('eb').value=r.eb||''; 
-        document.getElementById('p1s').value=r.p1s||''; document.getElementById('pd1').value=r.pd1||0; document.getElementById('p2s').value=r.p2s||''; document.getElementById('pd2').value=r.pd2||0; 
+        // Erkennung beider Variablen-Formate beim Editieren
+        document.getElementById('p1s').value=r.p1s||r.ps1||''; document.getElementById('pd1').value=r.pd1||0; document.getElementById('p2s').value=r.p2s||r.ps2||''; document.getElementById('pd2').value=r.pd2||0; 
         document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=!!r.tr; document.getElementById('korrHin').value=r.korrHin||''; document.getElementById('korrRueck').value=r.korrRueck||''; 
         document.getElementById('extra_h').value=r.extra_h||'';
         document.getElementById('edit-id-view').style.display='block'; document.getElementById('btn-cancel-edit').style.display='flex'; toggleStatus(r.status.toLowerCase().replace(/ /g, '-')); window.scrollTo(0,0); 
