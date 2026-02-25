@@ -252,8 +252,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.4.4<br>
-    Stand: 25.02.2026, 00:15 Uhr
+    Aktuelle Versionsnummer 3.4.5<br>
+    Stand: 25.02.2026, 14:15 Uhr
 </div>
 
 <script>
@@ -273,7 +273,14 @@
     let taxConfig = JSON.parse(localStorage.getItem('shifts_tax_cfg')) || {brutto: 0, stkl: 1, kinder: 0, kk: 1.6, bland: 'Berlin', kirche: 0, rentner: 0};
 
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
-    let openMonths = new Set([new Date().toISOString().substring(0,7)]);
+    
+    // Initialisierung: Die 3 Fokus-Monate (Vormonat, Aktueller, Nächster) standardmäßig öffnen
+    let openMonths = new Set();
+    const initNow = new Date();
+    for(let i = -1; i <= 1; i++) {
+        openMonths.add(new Date(initNow.getFullYear(), initNow.getMonth() + i, 1).toISOString().substring(0,7));
+    }
+
     let openYears = new Set([new Date().getFullYear().toString()]);
     let openOthers = new Set();
     let activeStatus = 'Dienst';
@@ -536,7 +543,6 @@
                 if(t2<=t1) t2+=24;
                 let n=0, sz=0, so=0, ft=0, w=0;
                 let p = []; 
-                // Fix: Erkenne sowohl p1s/p2s als auch ps1/ps2 (Abwärtskompatibilität für Refresh)
                 let p1Time = r.p1s || r.ps1;
                 let p2Time = r.p2s || r.ps2;
                 if(p1Time && r.pd1>0){ let s=timeToDec(p1Time); if(s<t1)s+=24; p.push({s, e:s+r.pd1/60}); } 
@@ -679,10 +685,13 @@
         const todayStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
         const now = new Date();
+        
+        // Berechnung des Fokus-Fensters (Vormonat, Aktueller, Nächster)
         const focusMonths = [];
         for(let i = -1; i <= 1; i++) {
             focusMonths.push(new Date(now.getFullYear(), now.getMonth() + i, 1).toISOString().substring(0,7));
         }
+
         let tH_total=0, tV_total=0, tN_total=0; 
         const tree = {};
         data.forEach(r => {
@@ -712,15 +721,16 @@
         document.getElementById('extra-vac-summary').innerText=`Zusatzurlaub: ${Math.floor(totalNForVac/nSollH)} Tage (${totalNForVac.toFixed(2)}/${nSollH.toFixed(0)}h)`;
         document.getElementById('p_fill').style.width=Math.min(100,(tH_total/config.jsoll*100))+"%"; 
         document.getElementById('p_text').innerText=`${(tH_total/config.jsoll*100).toFixed(1)}% von ${config.jsoll.toFixed(1)}h (${currentYear})`;
+        
         Object.keys(tree).sort().reverse().forEach(y => {
             const yData = tree[y], yOpen = openYears.has(y);
             let yearHtml = `<div class="year-group"><div class="month-header year-header ${yOpen?'open':''}" onclick="toggleY('${y}')"><span>JAHR ${y}</span><div class="m-stats"><span>Arbeit: ${yData.stats.arbeit}</span><span>Urlaub: ${yData.stats.urlaub}</span><span>Krank: ${yData.stats.krank}</span><span>BRGB: ${yData.stats.brgb}</span></div></div><div class="month-content ${yOpen?'open':''}">`;
             let focusHtml = ""; let otherHtmlArr = [];
             const sortedMonthKeys = Object.keys(yData.months).sort().reverse();
+            
             sortedMonthKeys.forEach(m => {
                 const mG = yData.months[m], mOpen = openMonths.has(m), [yr, mo] = m.split('-');
                 const isFocus = focusMonths.includes(m);
-                // Fix: rNH (Display) und nE (Berechnung) nutzen nun den exakten Minutenwert (kein Math.round)
                 const rNH = mG.nH.toFixed(2), nE = mG.nH * config.nacht, szE=mG.szH*config.samstag, soE=mG.soH*config.sonntag, ftE=mG.ftH*config.feiertag, brutto=nE+szE+soE+ftE+mG.bE+mG.fE, nV=(nE+soE+ftE+mG.sp+mG.fE)+((szE+mG.bE)*0.65);
                 let mHtml = `<div style="margin: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;"><div class="month-header ${mOpen?'open':''}" onclick="toggleM('${m}')"><span>${monthNames[parseInt(mo)-1]} <b>(${mG.h.toFixed(1)}h)</b></span><div class="m-stats" ${mOpen?'style="display:none"':''}><span>Nächte: ${mG.nCounts}</span><span>Zul: ${brutto.toFixed(2)}€</span></div></div><div class="month-content ${mOpen?'open':''}">
                         <div class="month-details-bar">
@@ -766,10 +776,12 @@
                         }).join('')}</table></div></div>`;
                 if(isFocus) focusHtml += mHtml; else { otherHtmlArr.push({key: m, html: mHtml}); }
             });
+
             yearHtml += focusHtml;
             if(otherHtmlArr.length > 0) {
                 const oOpen = openOthers.has(y);
-                const otherHtml = otherHtmlArr.sort((a,b) => a.key.localeCompare(b.key)).map(x => x.html).join('');
+                // Sortierung der restlichen Monate ebenfalls absteigend
+                const otherHtml = otherHtmlArr.sort((a,b) => b.key.localeCompare(a.key)).map(x => x.html).join('');
                 yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherHtmlArr.length})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
             }
             yearHtml += `</div></div>`; cont.innerHTML += yearHtml;
@@ -782,7 +794,6 @@
         const r=data.find(x=>x.id===id); if(!r) return;
         document.getElementById('edit-id').value=r.id; document.getElementById('d').value=r.d; 
         document.getElementById('s').value=r.s||''; document.getElementById('e').value=r.e||''; document.getElementById('ev').value=r.ev||''; document.getElementById('eb').value=r.eb||''; 
-        // Erkennung beider Variablen-Formate beim Editieren
         document.getElementById('p1s').value=r.p1s||r.ps1||''; document.getElementById('pd1').value=r.pd1||0; document.getElementById('p2s').value=r.p2s||r.ps2||''; document.getElementById('pd2').value=r.pd2||0; 
         document.getElementById('loc').value=r.loc||'BHF'; document.getElementById('tr').checked=!!r.tr; document.getElementById('korrHin').value=r.korrHin||''; document.getElementById('korrRueck').value=r.korrRueck||''; 
         document.getElementById('extra_h').value=r.extra_h||'';
