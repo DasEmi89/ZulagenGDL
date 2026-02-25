@@ -252,8 +252,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.4.5<br>
-    Stand: 25.02.2026, 14:15 Uhr
+    Aktuelle Versionsnummer 3.4.6<br>
+    Stand: 25.02.2026, 17:00 Uhr
 </div>
 
 <script>
@@ -274,12 +274,10 @@
 
     let data = JSON.parse(localStorage.getItem('shifts_p10') || '[]').filter(r => r.d);
     
-    // Initialisierung: Die 3 Fokus-Monate (Vormonat, Aktueller, Nächster) standardmäßig öffnen
+    // Initialisierung: Nur den aktuellen Monat standardmäßig aufklappen
     let openMonths = new Set();
     const initNow = new Date();
-    for(let i = -1; i <= 1; i++) {
-        openMonths.add(new Date(initNow.getFullYear(), initNow.getMonth() + i, 1).toISOString().substring(0,7));
-    }
+    openMonths.add(initNow.toISOString().substring(0,7));
 
     let openYears = new Set([new Date().getFullYear().toString()]);
     let openOthers = new Set();
@@ -686,7 +684,7 @@
         const currentYear = new Date().getFullYear().toString();
         const now = new Date();
         
-        // Berechnung des Fokus-Fensters (Vormonat, Aktueller, Nächster)
+        // Genau 3 Fokus-Monate berechnen (Vormonat, Aktueller, Folgemonat)
         const focusMonths = [];
         for(let i = -1; i <= 1; i++) {
             focusMonths.push(new Date(now.getFullYear(), now.getMonth() + i, 1).toISOString().substring(0,7));
@@ -780,7 +778,6 @@
             yearHtml += focusHtml;
             if(otherHtmlArr.length > 0) {
                 const oOpen = openOthers.has(y);
-                // Sortierung der restlichen Monate ebenfalls absteigend
                 const otherHtml = otherHtmlArr.sort((a,b) => b.key.localeCompare(a.key)).map(x => x.html).join('');
                 yearHtml += `<div class="month-header ${oOpen?'open':''}" style="background:#64748b; margin: 10px; border-radius: 8px;" onclick="toggleOthers('${y}')"><span>Weitere Monate (${otherHtmlArr.length})</span></div><div class="month-content ${oOpen?'open':''}">${otherHtml}</div>`;
             }
