@@ -252,8 +252,8 @@
 <div id="history"></div>
 
 <div class="version-footer">
-    Aktuelle Versionsnummer 3.4.6<br>
-    Stand: 25.02.2026, 17:00 Uhr
+    Aktuelle Versionsnummer 3.4.7<br>
+    Stand: 06.03.2026, 21:25 Uhr
 </div>
 
 <script>
@@ -557,7 +557,7 @@
                         else if(isA && c>=13 && c<20) sz+=(1/60);
                     }
                 }
-                baseH=w;
+                baseH = (statusCheck === 'schulung') ? 7.48 : w;
                 r.nH=n; r.szH=sz; r.soH=so; r.ftH=ft;
                 
                 let b = 0;
@@ -580,7 +580,7 @@
                     r.nH=0; r.szH=0; r.soH=0; r.ftH=0; r.bonus=0; r.spesen=0; r.fae=0; r.faeCount=0;
                 }
             } else {
-                if(statusCheck === 'schulung') baseH = config.gutschrift;
+                if(statusCheck === 'schulung') baseH = 7.48; else baseH = config.gutschrift;
             }
         } else if(['krank','krank nach nacht','urlaub'].includes(statusCheck)) {
             baseH = config.gutschrift;
@@ -706,7 +706,7 @@
                 if(['dienst', 'bereit', 'dispo', 'schulung'].includes(st)) yS.arbeit++;
                 if(r.loc === 'BRGB' && ['dienst', 'bereit', 'dispo', 'schulung'].includes(st)) yS.brgb++;
                 if(r.nH > 0) { yS.nCounts++; mG.nCounts++; }
-                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
+                mG.h+=r.h; mG.nH+=r.nH; mG.szH+=r.szH; mG.soH+=r.soH; mG.ftH+=r.ftH; mG.bE+=r.bonus; mG.sp+=r.spesen; mG.fE+=r.fae; mG.fE+=r.fae; mG.fC+=(r.faeCount||0);
                 if(y === currentYear) { tH_total += r.h; tN_total += r.nH; }
             }
         });
