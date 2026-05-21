@@ -266,7 +266,7 @@
             d.setDate(osterSonntag.getDate() + offset); 
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         };
-        return [...fixed, calc(-2), calc(1), calc(39), calc(50)];
+        return [...fixed, calc(-2), calc(1), calc(39), calc(51)];
     }
 
     const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -327,7 +327,7 @@
         localStorage.setItem('shifts_last_backup', now);
         updateBackupInfo();
         if(!isAuto) {
-            try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren fehlgeschlagen."); }
+            try { await navigator.clipboard.writeText(str); showToast("Backup in Zwischenablage!"); } catch (err) { alert("Kopieren failed."); }
         }
     }
 
