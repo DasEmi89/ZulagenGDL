@@ -593,7 +593,12 @@
                 if(statusCheck === 'schulung') baseH = 7.48; else baseH = config.gutschrift;
             }
         } else if(['krank','krank nach nacht','urlaub'].includes(statusCheck)) {
-            baseH = config.gutschrift;
+            let dtDay = new Date(r.d).getDay();
+            if (dtDay === 0 || dtDay === 6) {
+                baseH = 0;
+            } else {
+                baseH = config.gutschrift;
+            }
         } else { 
             baseH=0;
         }
@@ -852,6 +857,7 @@
         icsFile.push('END:VCALENDAR');
         const blob = new Blob([icsFile.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Dienstplan_Sync_${new Date().toISOString().split('T')[0]}.ics`; link.click();
+        exportJSONFile();
         showToast("iCal (V3.2.3) bereit!");
     }
 </script>
